@@ -1,0 +1,75 @@
+JFDML JFormDesigner: "7.0.5.1.409" Java: "17.0.4.1" encoding: "UTF-8"
+
+new FormModel {
+	contentType: "form/swing"
+	root: new FormRoot {
+		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
+			name: "this"
+			"border": new javax.swing.border.EmptyBorder( 6, 0, 6, 0 )
+			"preferredSize": new java.awt.Dimension( 269, 50 )
+			"minimumSize": new java.awt.Dimension( 249, 50 )
+			"opaque": false
+			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+				"$columnSpecs": "0, 0:1.0, 0"
+				"$rowSpecs": "0:1.0"
+				"$alignTop": true
+				"$alignLeft": true
+				"$hGap": 6
+				"$vGap": 5
+			} ) {
+				name: "panelContent"
+				"border": new javax.swing.border.CompoundBorder( new javax.swing.border.LineBorder( new java.awt.Color( 204, 0, 204, 255 ), 2, false ), new javax.swing.border.CompoundBorder( new javax.swing.border.SoftBevelBorder( 1, null, null, null, null ), new javax.swing.border.EmptyBorder( 2, 2, 2, 2 ) ) )
+				"background": sfield java.awt.Color black
+				"minimumSize": new java.awt.Dimension( 249, 50 )
+				"preferredSize": new java.awt.Dimension( 269, 50 )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonGoTo"
+					"toolTipText": "Goto this preset camera angle"
+					"icon": new com.jformdesigner.model.SwingIcon( 0, "/icons/green_arrow_24x24.png" )
+					"horizontalTextPosition": 10
+					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 16 )
+					"maximumSize": new java.awt.Dimension( 50, 46 )
+					"minimumSize": new java.awt.Dimension( 50, 46 )
+					"preferredSize": new java.awt.Dimension( 50, 46 )
+					"foreground": new java.awt.Color( 0, 165, 44, 255 )
+					"background": sfield java.awt.Color black
+					"iconTextGap": 2
+					"opaque": false
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+				add( new FormComponent( "javax.swing.JTextField" ) {
+					name: "textFieldName"
+					"text": "Name"
+					"horizontalAlignment": 0
+					"font": new java.awt.Font( "Segoe UI", 1, 20 )
+					"foreground": new java.awt.Color( 0, 204, 204, 255 )
+					"background": sfield java.awt.Color black
+					"selectionColor": new java.awt.Color( 255, 255, 0, 255 )
+					"opaque": false
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridx": 1
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonSet"
+					"icon": new com.jformdesigner.model.SwingIcon( 0, "/icons/orange_location_flag_24x24.png" )
+					"text": "SET"
+					"font": #Font0
+					"horizontalTextPosition": 10
+					"foreground": new java.awt.Color( 204, 102, 0, 255 )
+					"preferredSize": new java.awt.Dimension( 100, 30 )
+					"minimumSize": new java.awt.Dimension( 100, 30 )
+					"maximumSize": new java.awt.Dimension( 100, 30 )
+					"background": sfield java.awt.Color black
+					"iconTextGap": 2
+					"opaque": false
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridx": 2
+				} )
+			}, new FormLayoutConstraints( class java.lang.String ) {
+				"value": "Center"
+			} )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 0, 0 )
+			"size": new java.awt.Dimension( 460, 70 )
+		} )
+	}
+}

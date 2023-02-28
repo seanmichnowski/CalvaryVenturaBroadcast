@@ -1,0 +1,72 @@
+apply plugin: 'java'
+apply plugin: 'idea'
+
+group '1'
+version '1.0-SNAPSHOT'
+sourceCompatibility = 1.8
+
+/**
+ * ***************************************************************************************
+ * ***************************** GRADLE EXTERNAL REPOS ***********************************
+ * ***************************************************************************************
+ */
+
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+}
+
+repositories {
+	mavenLocal()
+	maven { url 'http://www.sparetimelabs.com/maven2' }
+    mavenCentral()
+}
+
+/**
+ * ***************************************************************************************
+ * ****************** ALL PROJECT EXTERNAL DEPENDENCIES LISTED HERE **********************
+ * ***************************************************************************************
+ */
+
+dependencies {
+    compile group: 'log4j', name: 'log4j', version: '1.2.17'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.7'
+    compile 'org.apache.httpcomponents:httpclient:4.5.10'
+    compile 'org.apache.httpcomponents:httpcore:4.4.1'
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.1'
+
+}
+
+
+/**
+ * ***************************************************************************************
+ * **************** JAR TASK - create a single Jar with all dependencies *****************
+ * ***************************************************************************************
+ */
+
+task createStandaloneJarTask(type: Jar) {
+    // By default, gradle compiles Java code in the "src/main/java" folder,
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'com.calvaryventura.broadcast.main.BroadcastControlMain'
+    }
+
+    // output jar filename setup
+    baseName   = 'Calvary_Ventura_Camera_Controller'   // start of filename
+    classifier = null                       // end of filename
+    version    = null                       // don't include version #'s
+
+    // include various files inside-of-the-source-tree into the output jar
+    from('src') {
+        into 'src'
+        include '**/*'
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    destinationDir = file(System.getProperty("user.home") + '/Desktop/')
+    with jar
+}
