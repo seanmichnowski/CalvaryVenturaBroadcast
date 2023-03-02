@@ -1,6 +1,6 @@
-package com.calvaryventura.broadcast.switcher.connection.test;
+package com.calvaryventura.broadcast.switcher.control.test;
 
-import com.calvaryventura.broadcast.switcher.connection.BlackmagicAtemSwitcherUserLayer;
+import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
 import org.apache.log4j.BasicConfigurator;
 
 public class TestSwitcherControllerSean
@@ -9,7 +9,8 @@ public class TestSwitcherControllerSean
     {
         final BlackmagicAtemSwitcherUserLayer broadcastSwitcherUserLayer = new BlackmagicAtemSwitcherUserLayer("192.168.86.222");
         Thread.sleep(1000);
-        broadcastSwitcherUserLayer.setProgramVideo(3);
+        broadcastSwitcherUserLayer.setProgramVideo(2);
+        broadcastSwitcherUserLayer.setPreviewVideo(7);
     }
 
     public static void main(String[] args) throws Exception

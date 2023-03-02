@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.switcher.connection;
+package com.calvaryventura.broadcast.switcher.control;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,31 +7,109 @@ import java.lang.invoke.MethodHandles;
 
 /**
  * TODO
+ * <p>
+ * There is a {@link BlackmagicAtemSwitcherTransportLayer} which lives inside this class,
+ * and a {@link BlackmagicAtemSwitcherNetworkLayer} which lives inside of that one.
  */
-public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTransportLayer
+public class BlackmagicAtemSwitcherUserLayer
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private final int[] atemProgramInputVideoSource = new int[2];
-    private final int[] atemPreviewInputVideoSource = new int[2];
+    private final BlackmagicAtemSwitcherTransportLayer transportLayer;
+
     private final boolean[] atemTransitionInTransition = new boolean[2];
     private final int[] atemTransitionFramesRemaining = new int[2];
     private final int[] atemTransitionPosition = new int[2];
-    private final boolean[][] atemKeyerOnAirEnabled = new boolean[2][4];
     private final boolean[] atemFadeToBlackStateFullyBlack = new boolean[2];
     private final boolean[] atemFadeToBlackStateInTransition = new boolean[2];
     private final boolean[] atemFadeToBlackStateFramesRemaining = new boolean[2];
     private final int[] atemAuxSourceInput = new int[6];
     private final int[] atemTallyByIndexTallyFlags = new int[21];
-    private int atemTallyByIndexSources;
+
+    private int currentVideoPreviewIdx;
+    private int currentVideoProgramIdx;
+    private int currentVideoAuxIdx;
+    private boolean upstreamKeyOn;
+    private boolean fadeToBlackOn;
+    private int transitionPosition;
+
+// TODO
+//  have a callback from the transport layer for switcher connection/init status (or maybe use a CONN command mnemonic?)
+//  implement more status field parsing via pyatm
+//  uncomment in the network layer and see why we aren't properly acknowledging the empty packet?
+//  use companion and see if there's a way to get the current status after we send a command, or just an ACK?
 
     /**
-     * TODO
+     * Creates the transport layer for low-level messaging.
+     * The transport layer also handles initialization.
      *
-     * @param switcherIp
+     * @param switcherIp IP address for the Blackmagic ATEM switcher
      */
     public BlackmagicAtemSwitcherUserLayer(String switcherIp) throws Exception
     {
-        super(switcherIp);
+        this.transportLayer = new BlackmagicAtemSwitcherTransportLayer(switcherIp,
+                this::parseSwitcherStatusFromTransportLayer);
+    }
+
+    /**
+     * Fired when a new status field is available from the switcher.
+     *
+     * @param cmd  four letter status mnemonic
+     * @param data variable length data associated with this status
+     */
+    private void parseSwitcherStatusFromTransportLayer(String cmd, byte[] data)
+    {
+        switch (cmd)
+        {
+            case "PrgI":
+                this.currentVideoProgramIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
+                logger.info("Current program video: {}", this.currentVideoProgramIdx);
+                break;
+            case "PrvI":
+                this.currentVideoPreviewIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
+                logger.info("Current preview video: {}", this.currentVideoPreviewIdx);
+                break;
+            case "AuxS":
+                logger.info("Aux video output: TODO");
+                break;
+            case "KeOn":
+                logger.info("Upstream key: TODO");
+                break;
+            case "FtbP":
+                logger.info("Fade to black: TODO");
+                break;
+            default:
+                break;
+        }
+    }
+
+    public int getCurrentVideoPreviewIdx()
+    {
+        return this.currentVideoPreviewIdx;
+    }
+
+    public int getCurrentVideoProgramIdx()
+    {
+        return this.currentVideoProgramIdx;
+    }
+
+    public int getCurrentVideoAuxIdx()
+    {
+        return this.currentVideoAuxIdx;
+    }
+
+    public boolean isUpstreamKeyOn()
+    {
+        return this.upstreamKeyOn;
+    }
+
+    public boolean isFadeToBlackOn()
+    {
+        return this.fadeToBlackOn;
+    }
+
+    public int getTransitionPosition()
+    {
+        return this.transitionPosition;
     }
 
     /**
@@ -43,7 +121,7 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
     {
         final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
         final byte low = (byte) (videoSourceIdx & 0xFF);
-        super.sendCommand("PrgI", new byte[]{0, 0, high, low});
+        this.transportLayer.sendCommand("CPgI", new byte[]{0, 0, high, low});
     }
 
     /**
@@ -55,180 +133,7 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
     {
         final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
         final byte low = (byte) (videoSourceIdx & 0xFF);
-        super.sendCommand("TODO", new byte[]{0, 0, high, low}); // TODO
-    }
-
-
-    /**
-     * TODO
-     *
-     * @param cmdStr
-     */
-    private void _parseGetCommands(String cmdStr)
-    {
-        byte mE, keyer, aUXChannel;
-        int sources;
-        long temp;
-        byte readBytesForTlSr;
-
-        if (cmdStr.equals("AMLv"))
-        {
-            _readToPacketBuffer(36);
-        } else if (cmdStr.equals("TlSr"))
-        {
-            readBytesForTlSr = ((ATEM_packetBufferLength - 2) / 3) * 3 + 2;
-            _readToPacketBuffer(readBytesForTlSr);
-        } else
-        {
-            _readToPacketBuffer();    // Default
-        }
-
-        if (cmdStr.equals("_pin"))
-        {
-            if (_packetBuffer[5] == 'T')
-            {
-                _ATEMmodel = 0;
-            } else if (_packetBuffer[5] == '1')
-            {
-                _ATEMmodel = _packetBuffer[29] == '4' ? 4 : 1;
-            } else if (_packetBuffer[5] == '2')
-            {
-                _ATEMmodel = _packetBuffer[29] == '4' ? 5 : 2;
-            } else if (_packetBuffer[5] == 'P')
-            {
-                _ATEMmodel = 3;
-            }
-            logger.info("Switcher type: {}, {}", _ATEMmodel, _ATEMmodel == 0 ? "Television Studio" : _ATEMmodel == 1 ? "ATEM 1 M/E" : _ATEMmodel == 2 ? "ATEM 2 M/E" :
-                    _ATEMmodel == 3 ? "ATEM Production Studio 4K" : _ATEMmodel == 4 ? "ATEM 1 M/E 4K" : _ATEMmodel == 5 ? "ATEM 2 M/E 4K" : "unknown");
-        }
-
-        if (cmdStr.equals("PrgI"))
-        {
-
-            mE = _packetBuffer[0];
-            if (mE <= 1)
-            {
-                atemProgramInputVideoSource[mE] = BlackmagicAtemSwitcherPacketUtils.word(_packetBuffer[2], _packetBuffer[3]);
-                logger.info("atemProgramInputVideoSource[mE={}] = {}", mE, atemProgramInputVideoSource[mE]);
-            }
-        } else if (cmdStr.equals("PrvI"))
-        {
-            mE = _packetBuffer[0];
-            if (mE <= 1)
-            {
-                atemPreviewInputVideoSource[mE] = BlackmagicAtemSwitcherPacketUtils.word(_packetBuffer[2], _packetBuffer[3]);
-                logger.info("atemPreviewInputVideoSource[mE={}] = {}", mE, atemPreviewInputVideoSource[mE]);
-            }
-        } else if (cmdStr.equals("TrPs"))
-        {
-            mE = _packetBuffer[0];
-            if (mE <= 1)
-            {
-                atemTransitionInTransition[mE] = _packetBuffer[1] > 0; // TODO?
-                logger.info("atemTransitionInTransition[mE={}] = {}", mE, atemTransitionInTransition[mE]);
-
-                atemTransitionFramesRemaining[mE] = _packetBuffer[2];
-                logger.info("atemTransitionFramesRemaining[mE={}] = {}", mE, atemTransitionFramesRemaining[mE]);
-
-                atemTransitionPosition[mE] = BlackmagicAtemSwitcherPacketUtils.word(_packetBuffer[4], _packetBuffer[5]);
-                logger.info("atemTransitionPosition[mE={}] = {}", mE, atemTransitionPosition[mE]);
-            }
-        } else if (cmdStr.equals("KeOn"))
-        {
-            mE = _packetBuffer[0];
-            keyer = _packetBuffer[1];
-            if (mE <= 1 && keyer <= 3)
-            {
-                atemKeyerOnAirEnabled[mE][keyer] = _packetBuffer[2] > 0; // TODO boolean?
-                logger.info("atemKeyerOnAirEnabled[mE={}][keyer={}] = {}", mE, keyer, atemKeyerOnAirEnabled[mE][keyer]);
-            }
-        } else if (cmdStr.equals("FtbS"))
-        {
-            mE = _packetBuffer[0];
-            if (mE <= 1)
-            {
-                atemFadeToBlackStateFullyBlack[mE] = _packetBuffer[1] > 0; // TODO booelan?
-                logger.info("atemFadeToBlackStateFullyBlack[mE={}] = {}", mE, atemFadeToBlackStateFullyBlack[mE]);
-
-
-                atemFadeToBlackStateInTransition[mE] = _packetBuffer[2] > 0; // TODO booelan?
-                logger.info("atemFadeToBlackStateInTransition[mE={}] = {}", mE, atemFadeToBlackStateInTransition[mE]);
-
-                atemFadeToBlackStateFramesRemaining[mE] = _packetBuffer[3] > 0; // TODO boolean or is this a number?
-                logger.info("atemFadeToBlackStateFramesRemaining[mE={}] = {}", mE, atemFadeToBlackStateFramesRemaining[mE]);
-            }
-        } else if (cmdStr.equals("AuxS"))
-        {
-            aUXChannel = _packetBuffer[0];
-            if (aUXChannel <= 5)
-            {
-                atemAuxSourceInput[aUXChannel] = BlackmagicAtemSwitcherPacketUtils.word(_packetBuffer[2], _packetBuffer[3]);
-                logger.info("atemAuxSourceInput[aUXChannel={}] = {}", aUXChannel, atemAuxSourceInput[aUXChannel]);
-            }
-        } else if (cmdStr.equals("TlIn"))
-        {
-            sources = BlackmagicAtemSwitcherPacketUtils.word(_packetBuffer[0], _packetBuffer[1]);
-            if (sources <= 20)
-            {
-                atemTallyByIndexSources = BlackmagicAtemSwitcherPacketUtils.word(_packetBuffer[0], _packetBuffer[1]);
-                logger.info("atemTallyByIndexSources = {}", atemTallyByIndexSources);
-
-                for (int a = 0; a < sources; a++)
-                {
-                    atemTallyByIndexTallyFlags[a] = _packetBuffer[2 + a];
-                    logger.info("atemTallyByIndexTallyFlags[a={}] = {}", a, atemTallyByIndexTallyFlags[a]);
-                }
-            }
-        } else
-        {
-            logger.info("Unknown command");
-        }
-    }
-
-    /**
-     * Get Program Input; Video Source
-     * mE 	0: ME1, 1: ME2
-     */
-    public int getProgramInputVideoSource(int mE)
-    {
-        return atemProgramInputVideoSource[mE];
-    }
-
-    /**
-     * Set Program Input; Video Source
-     * mE 	0: ME1, 1: ME2
-     * videoSource 	(See video source list)
-     */
-    public void setProgramInputVideoSource(byte mE, int videoSource) throws Exception
-    {
-        super._prepareCommandPacket("CPgI", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 2] = BlackmagicAtemSwitcherPacketUtils.highByte(videoSource);
-        _packetBuffer[12 + _cBBO + 4 + 4 + 3] = BlackmagicAtemSwitcherPacketUtils.lowByte(videoSource);
-        super._finishCommandPacket();
-    }
-
-    /**
-     * Get Preview Input; Video Source
-     * mE 	0: ME1, 1: ME2
-     */
-    public int getPreviewInputVideoSource(int mE)
-    {
-        return atemPreviewInputVideoSource[mE];
-    }
-
-    /**
-     * Set Preview Input; Video Source
-     * mE 	0: ME1, 1: ME2
-     * videoSource 	(See video source list)
-     */
-    public void setPreviewInputVideoSource(byte mE, int videoSource) throws Exception
-    {
-        super._prepareCommandPacket("CPvI", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 2] = BlackmagicAtemSwitcherPacketUtils.highByte(videoSource);
-        _packetBuffer[12 + _cBBO + 4 + 4 + 3] = BlackmagicAtemSwitcherPacketUtils.lowByte(videoSource);
-        super._finishCommandPacket();
+        this.transportLayer.sendCommand("CPvI", new byte[]{0, 0, high, low});
     }
 
     /**
@@ -237,9 +142,7 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
      */
     public void performCutME(byte mE) throws Exception
     {
-        super._prepareCommandPacket("DCut", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        super._finishCommandPacket();
+        this.transportLayer.sendCommand("DCut", new byte[0]); // TODO send 4 0 bytes?
     }
 
     /**
@@ -248,9 +151,7 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
      */
     public void performAutoME(byte mE) throws Exception
     {
-        super._prepareCommandPacket("DAut", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        super._finishCommandPacket();
+        this.transportLayer.sendCommand("DAut", new byte[0]); // TODO send 4 0 bytes?
     }
 
     /**
@@ -285,23 +186,11 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
      * mE 	0: ME1, 1: ME2
      * position 	0-9999
      */
-    public void setTransitionPosition(byte mE, int position) throws Exception
+    public void setTransitionPosition(int position) throws Exception
     {
-        super._prepareCommandPacket("CTPs", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 2] = BlackmagicAtemSwitcherPacketUtils.highByte(position);
-        _packetBuffer[12 + _cBBO + 4 + 4 + 3] = BlackmagicAtemSwitcherPacketUtils.lowByte(position);
-        super._finishCommandPacket();
-    }
-
-    /**
-     * Get Keyer On Air; Enabled
-     * mE 	0: ME1, 1: ME2
-     * keyer 	0-3: Keyer 1-4
-     */
-    public boolean getKeyerOnAirEnabled(int mE, int keyer)
-    {
-        return atemKeyerOnAirEnabled[mE][keyer];
+        final byte high = (byte) ((position >> 8) & 0xFF);
+        final byte low = (byte) (position & 0xFF);
+        this.transportLayer.sendCommand("CTPs", new byte[]{0, 0, high, low});
     }
 
     /**
@@ -312,11 +201,7 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
      */
     public void setKeyerOnAirEnabled(byte mE, byte keyer, boolean enabled) throws Exception
     {
-        super._prepareCommandPacket("CKOn", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 1] = keyer;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 2] = (byte) (enabled ? 1 : 0);
-        super._finishCommandPacket();
+        this.transportLayer.sendCommand("CKOn", new byte[]{0, keyer, (byte) (enabled ? 1 : 0), 0}); // TODO can I send 3 bytes?
     }
 
     /**
@@ -352,10 +237,7 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
      */
     public void performFadeToBlackME(byte mE) throws Exception
     {
-        super._prepareCommandPacket("FtbA", 4);
-        _packetBuffer[12 + _cBBO + 4 + 4] = mE;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 1] = 0x02;
-        super._finishCommandPacket();
+        this.transportLayer.sendCommand("FtbA", new byte[]{0, 0x02, 0, 0}); // TODO can I send 2 bytes?
     }
 
     /**
@@ -374,21 +256,9 @@ public class BlackmagicAtemSwitcherUserLayer extends BlackmagicAtemSwitcherTrans
      */
     public void setAuxSourceInput(byte aUXChannel, int input) throws Exception
     {
-        super._prepareCommandPacket("CAuS", 4);
-        // Set Mask: 1
-        _packetBuffer[12 + _cBBO + 4 + 4] |= 1;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 1] = aUXChannel;
-        _packetBuffer[12 + _cBBO + 4 + 4 + 2] = BlackmagicAtemSwitcherPacketUtils.highByte(input);
-        _packetBuffer[12 + _cBBO + 4 + 4 + 3] = BlackmagicAtemSwitcherPacketUtils.lowByte(input);
-        super._finishCommandPacket();
-    }
-
-    /**
-     * Get Tally By Index; Sources
-     */
-    public int getTallyByIndexSources()
-    {
-        return atemTallyByIndexSources;
+        final byte high = (byte) ((input >> 8) & 0xFF);
+        final byte low = (byte) (input & 0xFF);
+        this.transportLayer.sendCommand("CAuS", new byte[]{1, aUXChannel, high, low});
     }
 
     /**

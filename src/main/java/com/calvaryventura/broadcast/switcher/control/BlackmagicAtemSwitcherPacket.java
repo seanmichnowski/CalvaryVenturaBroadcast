@@ -1,9 +1,10 @@
-package com.calvaryventura.broadcast.switcher.connection;
+package com.calvaryventura.broadcast.switcher.control;
 
 import javax.xml.bind.DatatypeConverter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 /**
  * See website <a href="https://docs.openswitcher.org/udptransport.html">link</a>
@@ -35,6 +36,7 @@ public class BlackmagicAtemSwitcherPacket
     // byte fields
     private final byte[] rawPayloadBytes;
     private final byte[] fullPacketBytes;
+    private final Map<String, byte[]> payloadFields;
 
     /**
      * Private constructor, sets all header fields.
@@ -65,23 +67,23 @@ public class BlackmagicAtemSwitcherPacket
         this.acknowledgementNumber = acknowledgementNumber;
         this.remoteSequenceNumber = remoteSequenceNumber;
         this.localSequenceNumber = localSequenceNumber;
+        this.payloadFields = payloadFields == null ? new HashMap<>() : payloadFields;
 
         // there are two types of acceptable payloads
         if (payloadFields == null)
         {
-            this.packetLength = HEADER_LEN + rawPayloadBytes.length;
             this.rawPayloadBytes = rawPayloadBytes;
         } else
         {
             // compute length of payload, comprised of repeating fields, each field has 8 bytes fixed and N bytes data.
-            final AtomicInteger payloadLen = new AtomicInteger();
-            payloadFields.forEach((commandMnemonic, fieldBytes) -> payloadLen.addAndGet((8 + fieldBytes.length)));
-            this.packetLength = HEADER_LEN + payloadLen.get();
-            this.rawPayloadBytes = new byte[payloadLen.get()];
+            this.rawPayloadBytes = payloadFieldsToRawPayloadBytes(payloadFields);
         }
 
-        // set the header flags
+        // outgoing bytes
+        this.packetLength = HEADER_LEN + this.rawPayloadBytes.length;
         this.fullPacketBytes = new byte[this.packetLength];
+
+        // set the header flags
         fullPacketBytes[0] = this.flag0Reliable ? (byte) (fullPacketBytes[0] | HEADER_FLAGS_RELIABLE) : fullPacketBytes[0];
         fullPacketBytes[0] = this.flag1SYN ? (byte) (fullPacketBytes[0] | HEADER_FLAGS_SYN) : fullPacketBytes[0];
         fullPacketBytes[0] = this.flag2Retransmission ? (byte) (fullPacketBytes[0] | HEADER_FLAGS_RETRANSMISSION) : fullPacketBytes[0];
@@ -101,32 +103,43 @@ public class BlackmagicAtemSwitcherPacket
         fullPacketBytes[11] = (byte) (this.localSequenceNumber & 0xFF);
 
         // copy payload into outgoing buffer
-        if (payloadFields == null)
-        {
-            // copy payload bytes into outgoing buffer
-            System.arraycopy(this.rawPayloadBytes, 0, fullPacketBytes, HEADER_LEN, this.rawPayloadBytes.length);
-        } else
-        {
-            // payload fields get put into the outgoing buffer
-            final AtomicInteger txBufferOffset = new AtomicInteger(HEADER_LEN);
-            payloadFields.forEach((commandMnemonic, fieldBytes) -> {
-                // payload's length field includes the 8 fixed bytes
-                final int payloadFullFieldLen = 8 + fieldBytes.length;
+        System.arraycopy(this.rawPayloadBytes, 0, fullPacketBytes, HEADER_LEN, this.rawPayloadBytes.length);
+    }
 
-                // bytes 0 and 1 of the payload field entry are the payload field's length
-                fullPacketBytes[txBufferOffset.get()] = (byte) ((payloadFullFieldLen >> 8) & 0xFF);
-                fullPacketBytes[txBufferOffset.get() + 1] = (byte) (payloadFullFieldLen & 0xFF);
+    /**
+     * Called from the constructor to convert the specified payload fields into an outgoing byte array.
+     *
+     * @param payloadFields commands to send to the switcher
+     *
+     * @return bytes packaged ready to be sent to the switcher
+     */
+    private static byte[] payloadFieldsToRawPayloadBytes(Map<String, byte[]> payloadFields)
+    {
+        // find the payload length
+        final AtomicInteger payloadLen = new AtomicInteger();
+        payloadFields.forEach((commandMnemonic, fieldBytes) -> payloadLen.addAndGet((8 + fieldBytes.length)));
 
-                // bytes 4-7 are the 4 letter string mnemonic
-                System.arraycopy(commandMnemonic.getBytes(), 0, fullPacketBytes, txBufferOffset.get() + 4, 4);
+        // payload fields get put into the outgoing buffer
+        final byte[] payloadBytes = new byte[payloadLen.get()];
+        final AtomicInteger txBufferOffset = new AtomicInteger(0);
+        payloadFields.forEach((commandMnemonic, fieldBytes) -> {
+            // payload's length field includes the 8 fixed bytes
+            final int payloadFullFieldLen = 8 + fieldBytes.length;
 
-                // next is the variable length data portion of this payload field
-                System.arraycopy(fieldBytes, 0, fullPacketBytes, txBufferOffset.get() + 8, fieldBytes.length);
+            // bytes 0 and 1 of the payload field entry are the payload field's length
+            payloadBytes[txBufferOffset.get()] = (byte) ((payloadFullFieldLen >> 8) & 0xFF);
+            payloadBytes[txBufferOffset.get() + 1] = (byte) (payloadFullFieldLen & 0xFF);
 
-                // increment the buffer offset for next payload field entry
-                txBufferOffset.addAndGet(payloadFullFieldLen);
-            });
-        }
+            // bytes 4-7 are the 4 letter string mnemonic
+            System.arraycopy(commandMnemonic.getBytes(), 0, payloadBytes, txBufferOffset.get() + 4, 4);
+
+            // next is the variable length data portion of this payload field
+            System.arraycopy(fieldBytes, 0, payloadBytes, txBufferOffset.get() + 8, fieldBytes.length);
+
+            // increment the buffer offset for next payload field entry
+            txBufferOffset.addAndGet(payloadFullFieldLen);
+        });
+        return payloadBytes;
     }
 
     public boolean isFlag0Reliable()
@@ -199,42 +212,10 @@ public class BlackmagicAtemSwitcherPacket
      * of command mnemonics and command data sections.
      *
      * @return map of [commandMnemonic, dataBytes]
-     *
-     * @throws Exception on a parsing error or length field mismatch
      */
-    public Map<String, byte[]> getPayloadFields() throws Exception
+    public Map<String, byte[]> getPayloadFields()
     {
-        // parse payload fields
-        int rxCounter = 0;
-        final Map<String, byte[]> payloadFields = new HashMap<>();
-        while (rxCounter < this.rawPayloadBytes.length)
-        {
-            // sanity check
-            if (rxCounter + 8 > this.rawPayloadBytes.length)
-            {
-                throw new Exception("Not enough received bytes to read payload field's mnemonic");
-            }
-
-            // pull out the payload field length and mnemonic
-            final int payloadFieldLen = BlackmagicAtemSwitcherPacketUtils.word(this.rawPayloadBytes[rxCounter], this.rawPayloadBytes[rxCounter + 1]);
-            final String cmdMnemonic = new String(this.rawPayloadBytes, rxCounter + 4, 4);
-            final int fieldDataLen = payloadFieldLen - 8; // field data starts after 8 bytes
-
-            // sanity check
-            if (rxCounter + 8 + fieldDataLen > this.packetLength)
-            {
-                throw new Exception("Not enough received bytes to read payload field's data for mnemonic: " + cmdMnemonic);
-            }
-
-            // pull out payload field's data
-            final byte[] fieldData = new byte[fieldDataLen];
-            System.arraycopy(this.rawPayloadBytes, rxCounter + 8, fieldData, 0, fieldDataLen);
-            payloadFields.put(cmdMnemonic, fieldData);
-
-            // increment counter to advance to the next payload field
-            rxCounter += payloadFieldLen;
-        }
-        return payloadFields;
+        return this.payloadFields;
     }
 
     /**
@@ -279,6 +260,41 @@ public class BlackmagicAtemSwitcherPacket
         // copy full message in case we need it later
         this.fullPacketBytes = new byte[len];
         System.arraycopy(rx, 0, this.fullPacketBytes, 0, len);
+
+        // parse payload fields, ONLY if we have a valid payload field structure. An invalid payload field structure
+        // would be during initialization, when we get a payload of 8 bytes, and the last 4 are all zero's
+        this.payloadFields = new HashMap<>();
+        if (this.rawPayloadBytes.length > 0 && !IntStream.range(4, 8).boxed().allMatch(i -> this.rawPayloadBytes[i] == 0x00))
+        {
+            int rxCounter = 0;
+            while (rxCounter < this.rawPayloadBytes.length)
+            {
+                // sanity check
+                if (rxCounter + 8 > this.rawPayloadBytes.length)
+                {
+                    throw new Exception("Not enough received bytes to read payload field's mnemonic. Payload bytes: " + DatatypeConverter.printHexBinary(this.rawPayloadBytes));
+                }
+
+                // pull out the payload field length and mnemonic
+                final int payloadFieldLen = BlackmagicAtemSwitcherPacketUtils.word(this.rawPayloadBytes[rxCounter], this.rawPayloadBytes[rxCounter + 1]);
+                final String cmdMnemonic = new String(this.rawPayloadBytes, rxCounter + 4, 4);
+                final int fieldDataLen = payloadFieldLen - 8; // field data starts after 8 bytes
+
+                // sanity check
+                if (rxCounter + 8 + fieldDataLen > this.packetLength)
+                {
+                    throw new Exception("Not enough received bytes to read payload field's data for mnemonic: " + cmdMnemonic);
+                }
+
+                // pull out payload field's data
+                final byte[] fieldData = new byte[fieldDataLen];
+                System.arraycopy(this.rawPayloadBytes, rxCounter + 8, fieldData, 0, fieldDataLen);
+                payloadFields.put(cmdMnemonic, fieldData);
+
+                // increment counter to advance to the next payload field
+                rxCounter += payloadFieldLen;
+            }
+        }
     }
 
     /**
