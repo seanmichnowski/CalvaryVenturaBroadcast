@@ -11,8 +11,7 @@ import javax.swing.border.*;
 import com.calvaryventura.broadcast.ptz.commander.PtzCameraCommandSender;
 import com.calvaryventura.broadcast.ptz.ui.IPtzCameraUiCallbacks;
 import com.calvaryventura.broadcast.ptz.ui.PtzCameraUi;
-import com.calvaryventura.broadcast.switcher.BroadcastSwitcherController;
-import com.calvaryventura.broadcast.switcher.IBroadcastSwitcherCallbacks;
+import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUi;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
@@ -24,9 +23,9 @@ import org.slf4j.LoggerFactory;
 public class BroadcastControlMain extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private final BlackmagicAtemSwitcherUserLayer switcherControl = new BlackmagicAtemSwitcherUserLayer();
     private final PtzCameraCommandSender wallCameraCommandSender;
     private final PtzCameraCommandSender overheadCameraCommandSender;
-    private final BroadcastSwitcherController broadcastSwitcherController;
     private static final String UCAT_SETTINGS_JAR_RESOURCE = "/settings/broadcast_settings.txt"; // src/main/resources
 
     /**
@@ -85,9 +84,8 @@ public class BroadcastControlMain extends JFrame
         }
 
         // initialize command senders
-        this.broadcastSwitcherController = new BroadcastSwitcherController(broadcastIp, null); // TODO this.labelStatus);
-        this.wallCameraCommandSender = new PtzCameraCommandSender(wallCameraIp, null); //this.labelCameraStatus);
-        this.overheadCameraCommandSender = new PtzCameraCommandSender(overheadCameraIp, null); //this.labelCameraStatus);
+        this.wallCameraCommandSender = new PtzCameraCommandSender(wallCameraIp, this.leftCameraControlPanel.getLabelCameraStatus());
+        this.overheadCameraCommandSender = new PtzCameraCommandSender(overheadCameraIp, this.rightCameraControlPanel.getLabelCameraStatus());
 
         this.leftCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
         {
@@ -167,36 +165,75 @@ public class BroadcastControlMain extends JFrame
             }
         });
 
-        this.switcherControlPanel.setCallback(new IBroadcastSwitcherCallbacks()
-        {
-            @Override
-            public void fadeToBlackActive(boolean active)
-            {
-                broadcastSwitcherController.sendHttpGetCommand(10);
-            }
 
-            @Override
-            public void lyricsActive(boolean active)
+        this.switcherControlPanel.setAutoPressed(e -> {
+            try
             {
-                broadcastSwitcherController.sendHttpGetCommand(18);
-            }
-
-            @Override
-            public void activePreviewInputChanged(int inputIdx)
+                this.switcherControl.performAuto();
+            } catch (Exception ex)
             {
-
-            }
-
-            @Override
-            public void activeProgramInputChanged(int inputIdx)
-            {
-                // TODO
-                broadcastSwitcherController.sendHttpGetCommand(20); // proclaim
-                broadcastSwitcherController.sendHttpGetCommand(21); // booth
-                broadcastSwitcherController.sendHttpGetCommand(22); // overhead
-                broadcastSwitcherController.sendHttpGetCommand(23); // wall
+                ex.printStackTrace();
             }
         });
+
+        this.switcherControlPanel.setCutPressed(e -> {
+            try
+            {
+                this.switcherControl.performCut();
+            } catch (Exception ex)
+            {
+                ex.printStackTrace();
+            }
+        });
+
+        this.switcherControlPanel.setLyricsPressed(lyricsOn -> {
+            try
+            {
+                this.switcherControl.setKeyerOnAirEnabled(lyricsOn);
+            } catch (Exception ex)
+            {
+                ex.printStackTrace();
+            }
+        });
+
+        this.switcherControlPanel.setFadeToBlackPressed(e -> {
+            try
+            {
+                this.switcherControl.performFadeToBlack();
+            } catch (Exception ex)
+            {
+                ex.printStackTrace();
+            }
+        });
+
+        this.switcherControlPanel.setPreviewSourceChanged(previewIdx -> {
+            try
+            {
+                this.switcherControl.setPreviewVideo(previewIdx);
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        });
+
+        this.switcherControlPanel.setProgramSourceChanged(programIdx -> {
+            try
+            {
+                this.switcherControl.setProgramVideo(programIdx);
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        });
+
+        this.switcherControl.addUpstreamKeyOnAirConsumer(keyOnAir -> this.switcherControlPanel.setLyricsStatus(keyOnAir));
+        this.switcherControl.addFadeToBlackActiveConsumer(ftb -> this.switcherControlPanel.setFadeToBlackStatus(ftb));
+        this.switcherControl.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
+        this.switcherControl.addPreviewVideoSourceChangedConsumer(previewIdx -> this.switcherControlPanel.setPreviewSourceStatus(previewIdx));
+        this.switcherControl.addProgramVideoSourceChangedConsumer(programIdx -> this.switcherControlPanel.setProgramSourceStatus(programIdx));
+
+        // after all the UI initialization is done, finally start the connection to the switcher
+        this.switcherControl.initialize(broadcastIp);
     }
 
     /**

@@ -4,32 +4,58 @@ new FormModel {
 	contentType: "form/swing"
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
-			"$columnSpecs": "0, 0, 0, 0:1.0, 0:1.0, 0:1.0, 0:1.0"
-			"$rowSpecs": "0:0.1, 0"
+			"$columnSpecs": "0, 0, 0:1.0"
+			"$rowSpecs": "0:0.1"
 			"$hGap": 20
 			"$alignTop": true
 			"$alignLeft": true
 		} ) {
 			name: "this"
 			"background": sfield java.awt.Color black
-			add( new FormComponent( "javax.swing.JButton" ) {
-				name: "buttonToggleLyrics"
-				"text": "<html>TOGGLE<br>LYRICS</html>"
+			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
+				"columns": 2
+				"rows": 2
+				"hgap": 10
+				"vgap": 10
+			} ) {
+				name: "panel1"
 				"opaque": false
-				"foreground": sfield java.awt.Color cyan
-				"background": sfield java.awt.Color black
-				"font": &Font0 new java.awt.Font( "Segoe UI", 1, 16 )
+				auxiliary() {
+					"JavaCodeGenerator.variableLocal": true
+				}
+				add( new FormComponent( "javax.swing.JToggleButton" ) {
+					name: "buttonToggleLyrics"
+					"text": "<html>Toggle<br>Lyrics</html>"
+					"opaque": false
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 16 )
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonFadeToBlack"
+					"text": "<html>Fade to<br>Black</html>"
+					"opaque": false
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonCut"
+					"text": "CUT"
+					"opaque": false
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonFade"
+					"text": "FADE"
+					"opaque": false
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
-			add( new FormComponent( "javax.swing.JButton" ) {
-				name: "buttonFadeToBlack"
-				"text": "<html>Fade to<br>Black</html>"
-				"opaque": false
-				"foreground": sfield java.awt.Color cyan
-				"background": sfield java.awt.Color black
-				"font": #Font0
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridx": 1
-			} )
 			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
 				name: "hSpacer1"
 				"minimumSize": new java.awt.Dimension( 50, 12 )
@@ -39,55 +65,103 @@ new FormModel {
 					"JavaCodeGenerator.variableLocal": true
 				}
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+				"gridx": 1
+			} )
+			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
+				"columns": 4
+				"rows": 2
+				"hgap": 10
+				"vgap": 10
+			} ) {
+				name: "panel2"
+				"opaque": false
+				auxiliary() {
+					"JavaCodeGenerator.variableLocal": true
+				}
+				add( new FormComponent( "javax.swing.JLabel" ) {
+					name: "labelPreview"
+					"text": "<html><u>Preview<br>selection:</u></html>"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+					"horizontalAlignment": 4
+					auxiliary() {
+						"JavaCodeGenerator.variableLocal": true
+					}
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonProclaimPreview"
+					"text": "Proclaim"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonBoothPreview"
+					"text": "Booth"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonWallPreview"
+					"text": "Wall"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonOverheadPreview"
+					"text": "Overhead"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JLabel" ) {
+					name: "labelProgram"
+					"text": "<html><u>Program<br>selection:</u></html>"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+					"horizontalAlignment": 4
+					auxiliary() {
+						"JavaCodeGenerator.variableLocal": true
+					}
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonProclaimProgram"
+					"text": "Proclaim"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonBoothProgram"
+					"text": "Booth"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonWallProgram"
+					"text": "Wall"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+				add( new FormComponent( "javax.swing.JButton" ) {
+					name: "buttonOverheadProgram"
+					"text": "Overhead"
+					"foreground": sfield java.awt.Color cyan
+					"background": sfield java.awt.Color black
+					"font": #Font0
+				} )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridx": 2
-			} )
-			add( new FormComponent( "javax.swing.JButton" ) {
-				name: "buttonProclaim"
-				"text": "Proclaim"
-				"foreground": sfield java.awt.Color cyan
-				"background": sfield java.awt.Color black
-				"font": #Font0
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridx": 3
-			} )
-			add( new FormComponent( "javax.swing.JButton" ) {
-				name: "buttonBooth"
-				"text": "Booth"
-				"foreground": sfield java.awt.Color cyan
-				"background": sfield java.awt.Color black
-				"font": #Font0
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridx": 4
-			} )
-			add( new FormComponent( "javax.swing.JButton" ) {
-				name: "buttonWall"
-				"text": "Wall"
-				"foreground": sfield java.awt.Color cyan
-				"background": sfield java.awt.Color black
-				"font": #Font0
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridx": 5
-			} )
-			add( new FormComponent( "javax.swing.JButton" ) {
-				name: "buttonOverhead"
-				"text": "Overhead"
-				"foreground": sfield java.awt.Color cyan
-				"background": sfield java.awt.Color black
-				"font": #Font0
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridx": 6
-			} )
-			add( new FormComponent( "javax.swing.JLabel" ) {
-				name: "labelStatus"
-				"font": new java.awt.Font( "Segoe UI", 1, 14 )
-				"text": " "
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridy": 1
-				"gridwidth": 7
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )
-			"size": new java.awt.Dimension( 660, 105 )
+			"size": new java.awt.Dimension( 785, 200 )
 		} )
 	}
 }

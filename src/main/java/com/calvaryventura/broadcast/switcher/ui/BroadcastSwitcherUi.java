@@ -1,16 +1,20 @@
 package com.calvaryventura.broadcast.switcher.ui;
 
-import com.calvaryventura.broadcast.switcher.IBroadcastSwitcherCallbacks;
-
 import javax.swing.*;
 import java.awt.*;
+import java.util.function.Consumer;
 
 /**
  * TODO
  */
 public class BroadcastSwitcherUi extends JPanel
 {
-    private IBroadcastSwitcherCallbacks callback;
+    private Consumer<Integer> previewSourceChanged;
+    private Consumer<Integer> programSourceChanged;
+    private Consumer<Boolean> fadeToBlackPressed;
+    private Consumer<Boolean> lyricsPressed;
+    private Consumer<Boolean> autoPressed;
+    private Consumer<Boolean> cutPressed;
 
     /**
      * Initializes the HTTP connection to the Blackmagic switcher.
@@ -18,23 +22,48 @@ public class BroadcastSwitcherUi extends JPanel
     public BroadcastSwitcherUi()
     {
         this.initComponents();
-
-        this.buttonProclaim.addActionListener(e -> this.sendCommandAndSetButtonColor(this.buttonProclaim, 20));
-        this.buttonBooth.addActionListener(e -> this.sendCommandAndSetButtonColor(this.buttonBooth, 21));
-        this.buttonWall.addActionListener(e -> this.sendCommandAndSetButtonColor(this.buttonWall, 23));
-        this.buttonOverhead.addActionListener(e -> this.sendCommandAndSetButtonColor(this.buttonOverhead, 22));
-        this.buttonToggleLyrics.addActionListener(e -> this.callback.lyricsActive(true));
-        this.buttonFadeToBlack.addActionListener(e -> this.callback.fadeToBlackActive(true));
-
-
+        this.buttonToggleLyrics.addActionListener(e -> this.lyricsPressed.accept(this.buttonToggleLyrics.isSelected()));
+        this.buttonFadeToBlack.addActionListener(e -> this.fadeToBlackPressed.accept(true));
+        this.buttonCut.addActionListener(e -> this.cutPressed.accept(true));
+        this.buttonFade.addActionListener(e -> this.autoPressed.accept(true));
+        this.buttonOverheadPreview.addActionListener(e -> this.previewSourceChanged.accept(6));
+        this.buttonWallPreview.addActionListener(e -> this.previewSourceChanged.accept(5));
+        this.buttonBoothPreview.addActionListener(e -> this.previewSourceChanged.accept(4));
+        this.buttonProclaimPreview.addActionListener(e -> this.previewSourceChanged.accept(3));
+        this.buttonOverheadProgram.addActionListener(e -> this.programSourceChanged.accept(6));
+        this.buttonWallProgram.addActionListener(e -> this.programSourceChanged.accept(5));
+        this.buttonBoothProgram.addActionListener(e -> this.programSourceChanged.accept(4));
+        this.buttonProclaimProgram.addActionListener(e -> this.programSourceChanged.accept(3));
     }
 
-    /**
-     * @param callback mechanism to pass UI events OUT of this class
-     */
-    public void setCallback(IBroadcastSwitcherCallbacks callback)
+    public void setPreviewSourceChanged(Consumer<Integer> previewSourceChanged)
     {
-        this.callback = callback;
+        this.previewSourceChanged = previewSourceChanged;
+    }
+
+    public void setProgramSourceChanged(Consumer<Integer> programSourceChanged)
+    {
+        this.programSourceChanged = programSourceChanged;
+    }
+
+    public void setFadeToBlackPressed(Consumer<Boolean> fadeToBlackPressed)
+    {
+        this.fadeToBlackPressed = fadeToBlackPressed;
+    }
+
+    public void setLyricsPressed(Consumer<Boolean> lyricsPressed)
+    {
+        this.lyricsPressed = lyricsPressed;
+    }
+
+    public void setAutoPressed(Consumer<Boolean> autoPressed)
+    {
+        this.autoPressed = autoPressed;
+    }
+
+    public void setCutPressed(Consumer<Boolean> cutPressed)
+    {
+        this.cutPressed = cutPressed;
     }
 
     /**
@@ -46,50 +75,49 @@ public class BroadcastSwitcherUi extends JPanel
     }
 
     /**
-     * TODO
-     * @param active
+     * @param active indication the transition is in progress
+     */
+    public void setFadeTransitionInProgressStatus(boolean active)
+    {
+        this.buttonFade.setBackground(active ? Color.YELLOW : Color.BLACK);
+    }
+
+    /**
+     * @param active indication the fade to black is active
      */
     public void setFadeToBlackStatus(boolean active)
     {
+        this.buttonFadeToBlack.setBackground(active ? Color.RED : Color.BLACK);
     }
 
     /**
-     * TODO
-     * @param active
+     * @param active indication the lyrics are displayed on-screen
      */
     public void setLyricsStatus(boolean active)
     {
+        this.buttonToggleLyrics.setBackground(active ? Color.RED : Color.BLACK);
     }
 
     /**
-     * TODO
-     * @param previewSourceActive
+     * @param previewSourceActive index of the active preview video source
      */
-    public void setPreviewSourceActive(int previewSourceActive)
+    public void setPreviewSourceStatus(int previewSourceActive)
     {
-        // TODO button.setBackground(Color.GREEN);
+        this.buttonProclaimPreview.setBackground(previewSourceActive == 3 ? Color.GREEN : Color.BLACK);
+        this.buttonBoothPreview.setBackground(previewSourceActive == 4 ? Color.GREEN : Color.BLACK);
+        this.buttonWallPreview.setBackground(previewSourceActive == 5 ? Color.GREEN : Color.BLACK);
+        this.buttonOverheadPreview.setBackground(previewSourceActive == 6 ? Color.GREEN : Color.BLACK);
     }
 
     /**
-     * TODO
-     * @param programSourceActive
+     * @param programSourceActive index of the active program video source
      */
-    public void setProgramSourceActive(int programSourceActive)
+    public void setProgramSourceStatus(int programSourceActive)
     {
-        // TODO button.setBackground(Color.RED.darker());
-    }
-
-    /**
-     * @param button        the button to set to a RED background if the command succeeds
-     * @param buttonCommand the blackmagic/companion stream-deck button number to send
-     */
-    private void sendCommandAndSetButtonColor(JButton button, int buttonCommand)
-    {
-        this.buttonWall.setBackground(Color.BLACK);
-        this.buttonBooth.setBackground(Color.BLACK);
-        this.buttonOverhead.setBackground(Color.BLACK);
-        this.buttonProclaim.setBackground(Color.BLACK);
-        this.callback.activeProgramInputChanged(buttonCommand);
+        this.buttonProclaimProgram.setBackground(programSourceActive == 3 ? Color.RED : Color.BLACK);
+        this.buttonBoothProgram.setBackground(programSourceActive == 4 ? Color.RED : Color.BLACK);
+        this.buttonWallProgram.setBackground(programSourceActive == 5 ? Color.RED : Color.BLACK);
+        this.buttonOverheadProgram.setBackground(programSourceActive == 6 ? Color.RED : Color.BLACK);
     }
 
     /**
@@ -98,43 +126,76 @@ public class BroadcastSwitcherUi extends JPanel
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        buttonToggleLyrics = new JButton();
+        JPanel panel1 = new JPanel();
+        buttonToggleLyrics = new JToggleButton();
         buttonFadeToBlack = new JButton();
+        buttonCut = new JButton();
+        buttonFade = new JButton();
         JPanel hSpacer1 = new JPanel(null);
-        buttonProclaim = new JButton();
-        buttonBooth = new JButton();
-        buttonWall = new JButton();
-        buttonOverhead = new JButton();
-        labelStatus = new JLabel();
+        JPanel panel2 = new JPanel();
+        JLabel labelPreview = new JLabel();
+        buttonProclaimPreview = new JButton();
+        buttonBoothPreview = new JButton();
+        buttonWallPreview = new JButton();
+        buttonOverheadPreview = new JButton();
+        JLabel labelProgram = new JLabel();
+        buttonProclaimProgram = new JButton();
+        buttonBoothProgram = new JButton();
+        buttonWallProgram = new JButton();
+        buttonOverheadProgram = new JButton();
 
         //======== this ========
         setBackground(Color.black);
         setName("this");
         setLayout(new GridBagLayout());
-        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0, 0, 0, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0};
-        ((GridBagLayout)getLayout()).columnWeights = new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 0.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 0, 0};
+        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0};
+        ((GridBagLayout)getLayout()).columnWeights = new double[] {0.0, 0.0, 1.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 1.0E-4};
 
-        //---- buttonToggleLyrics ----
-        buttonToggleLyrics.setText("<html>TOGGLE<br>LYRICS</html>");
-        buttonToggleLyrics.setOpaque(false);
-        buttonToggleLyrics.setForeground(Color.cyan);
-        buttonToggleLyrics.setBackground(Color.black);
-        buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        buttonToggleLyrics.setName("buttonToggleLyrics");
-        add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 20), 0, 0));
+        //======== panel1 ========
+        {
+            panel1.setOpaque(false);
+            panel1.setName("panel1");
+            panel1.setLayout(new GridLayout(2, 2, 10, 10));
 
-        //---- buttonFadeToBlack ----
-        buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
-        buttonFadeToBlack.setOpaque(false);
-        buttonFadeToBlack.setForeground(Color.cyan);
-        buttonFadeToBlack.setBackground(Color.black);
-        buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        buttonFadeToBlack.setName("buttonFadeToBlack");
-        add(buttonFadeToBlack, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+            //---- buttonToggleLyrics ----
+            buttonToggleLyrics.setText("<html>Toggle<br>Lyrics</html>");
+            buttonToggleLyrics.setOpaque(false);
+            buttonToggleLyrics.setForeground(Color.cyan);
+            buttonToggleLyrics.setBackground(Color.black);
+            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonToggleLyrics.setName("buttonToggleLyrics");
+            panel1.add(buttonToggleLyrics);
+
+            //---- buttonFadeToBlack ----
+            buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
+            buttonFadeToBlack.setOpaque(false);
+            buttonFadeToBlack.setForeground(Color.cyan);
+            buttonFadeToBlack.setBackground(Color.black);
+            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonFadeToBlack.setName("buttonFadeToBlack");
+            panel1.add(buttonFadeToBlack);
+
+            //---- buttonCut ----
+            buttonCut.setText("CUT");
+            buttonCut.setOpaque(false);
+            buttonCut.setForeground(Color.cyan);
+            buttonCut.setBackground(Color.black);
+            buttonCut.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonCut.setName("buttonCut");
+            panel1.add(buttonCut);
+
+            //---- buttonFade ----
+            buttonFade.setText("FADE");
+            buttonFade.setOpaque(false);
+            buttonFade.setForeground(Color.cyan);
+            buttonFade.setBackground(Color.black);
+            buttonFade.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonFade.setName("buttonFade");
+            panel1.add(buttonFade);
+        }
+        add(panel1, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 20), 0, 0));
 
@@ -143,67 +204,116 @@ public class BroadcastSwitcherUi extends JPanel
         hSpacer1.setPreferredSize(new Dimension(50, 10));
         hSpacer1.setOpaque(false);
         hSpacer1.setName("hSpacer1");
-        add(hSpacer1, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+        add(hSpacer1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 20), 0, 0));
 
-        //---- buttonProclaim ----
-        buttonProclaim.setText("Proclaim");
-        buttonProclaim.setForeground(Color.cyan);
-        buttonProclaim.setBackground(Color.black);
-        buttonProclaim.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        buttonProclaim.setName("buttonProclaim");
-        add(buttonProclaim, new GridBagConstraints(3, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 20), 0, 0));
+        //======== panel2 ========
+        {
+            panel2.setOpaque(false);
+            panel2.setName("panel2");
+            panel2.setLayout(new GridLayout(2, 4, 10, 10));
 
-        //---- buttonBooth ----
-        buttonBooth.setText("Booth");
-        buttonBooth.setForeground(Color.cyan);
-        buttonBooth.setBackground(Color.black);
-        buttonBooth.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        buttonBooth.setName("buttonBooth");
-        add(buttonBooth, new GridBagConstraints(4, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 20), 0, 0));
+            //---- labelPreview ----
+            labelPreview.setText("<html><u>Preview<br>selection:</u></html>");
+            labelPreview.setForeground(Color.cyan);
+            labelPreview.setBackground(Color.black);
+            labelPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            labelPreview.setHorizontalAlignment(SwingConstants.RIGHT);
+            labelPreview.setName("labelPreview");
+            panel2.add(labelPreview);
 
-        //---- buttonWall ----
-        buttonWall.setText("Wall");
-        buttonWall.setForeground(Color.cyan);
-        buttonWall.setBackground(Color.black);
-        buttonWall.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        buttonWall.setName("buttonWall");
-        add(buttonWall, new GridBagConstraints(5, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 20), 0, 0));
+            //---- buttonProclaimPreview ----
+            buttonProclaimPreview.setText("Proclaim");
+            buttonProclaimPreview.setForeground(Color.cyan);
+            buttonProclaimPreview.setBackground(Color.black);
+            buttonProclaimPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonProclaimPreview.setName("buttonProclaimPreview");
+            panel2.add(buttonProclaimPreview);
 
-        //---- buttonOverhead ----
-        buttonOverhead.setText("Overhead");
-        buttonOverhead.setForeground(Color.cyan);
-        buttonOverhead.setBackground(Color.black);
-        buttonOverhead.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        buttonOverhead.setName("buttonOverhead");
-        add(buttonOverhead, new GridBagConstraints(6, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 0), 0, 0));
+            //---- buttonBoothPreview ----
+            buttonBoothPreview.setText("Booth");
+            buttonBoothPreview.setForeground(Color.cyan);
+            buttonBoothPreview.setBackground(Color.black);
+            buttonBoothPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonBoothPreview.setName("buttonBoothPreview");
+            panel2.add(buttonBoothPreview);
 
-        //---- labelStatus ----
-        labelStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        labelStatus.setText(" ");
-        labelStatus.setName("labelStatus");
-        add(labelStatus, new GridBagConstraints(0, 1, 7, 1, 0.0, 0.0,
+            //---- buttonWallPreview ----
+            buttonWallPreview.setText("Wall");
+            buttonWallPreview.setForeground(Color.cyan);
+            buttonWallPreview.setBackground(Color.black);
+            buttonWallPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonWallPreview.setName("buttonWallPreview");
+            panel2.add(buttonWallPreview);
+
+            //---- buttonOverheadPreview ----
+            buttonOverheadPreview.setText("Overhead");
+            buttonOverheadPreview.setForeground(Color.cyan);
+            buttonOverheadPreview.setBackground(Color.black);
+            buttonOverheadPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonOverheadPreview.setName("buttonOverheadPreview");
+            panel2.add(buttonOverheadPreview);
+
+            //---- labelProgram ----
+            labelProgram.setText("<html><u>Program<br>selection:</u></html>");
+            labelProgram.setForeground(Color.cyan);
+            labelProgram.setBackground(Color.black);
+            labelProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            labelProgram.setHorizontalAlignment(SwingConstants.RIGHT);
+            labelProgram.setName("labelProgram");
+            panel2.add(labelProgram);
+
+            //---- buttonProclaimProgram ----
+            buttonProclaimProgram.setText("Proclaim");
+            buttonProclaimProgram.setForeground(Color.cyan);
+            buttonProclaimProgram.setBackground(Color.black);
+            buttonProclaimProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonProclaimProgram.setName("buttonProclaimProgram");
+            panel2.add(buttonProclaimProgram);
+
+            //---- buttonBoothProgram ----
+            buttonBoothProgram.setText("Booth");
+            buttonBoothProgram.setForeground(Color.cyan);
+            buttonBoothProgram.setBackground(Color.black);
+            buttonBoothProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonBoothProgram.setName("buttonBoothProgram");
+            panel2.add(buttonBoothProgram);
+
+            //---- buttonWallProgram ----
+            buttonWallProgram.setText("Wall");
+            buttonWallProgram.setForeground(Color.cyan);
+            buttonWallProgram.setBackground(Color.black);
+            buttonWallProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonWallProgram.setName("buttonWallProgram");
+            panel2.add(buttonWallProgram);
+
+            //---- buttonOverheadProgram ----
+            buttonOverheadProgram.setText("Overhead");
+            buttonOverheadProgram.setForeground(Color.cyan);
+            buttonOverheadProgram.setBackground(Color.black);
+            buttonOverheadProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonOverheadProgram.setName("buttonOverheadProgram");
+            panel2.add(buttonOverheadProgram);
+        }
+        add(panel2, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 0), 0, 0));
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    private JButton buttonToggleLyrics;
+    private JToggleButton buttonToggleLyrics;
     private JButton buttonFadeToBlack;
-    private JButton buttonProclaim;
-    private JButton buttonBooth;
-    private JButton buttonWall;
-    private JButton buttonOverhead;
-    private JLabel labelStatus;
+    private JButton buttonCut;
+    private JButton buttonFade;
+    private JButton buttonProclaimPreview;
+    private JButton buttonBoothPreview;
+    private JButton buttonWallPreview;
+    private JButton buttonOverheadPreview;
+    private JButton buttonProclaimProgram;
+    private JButton buttonBoothProgram;
+    private JButton buttonWallProgram;
+    private JButton buttonOverheadProgram;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

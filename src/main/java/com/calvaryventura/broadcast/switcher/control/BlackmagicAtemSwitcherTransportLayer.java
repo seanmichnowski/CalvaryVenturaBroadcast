@@ -7,16 +7,19 @@ import javax.xml.bind.DatatypeConverter;
 import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
  * This layer is the communication protocol with the Blackmagic ATEM device.
+ * Documentation: <a href="https://docs.openswitcher.org/index.html">link</a>.
  */
 public class BlackmagicAtemSwitcherTransportLayer
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private static final int ATEM_UDP_CONTROL_PORT = 9910;
     private final BlackmagicAtemSwitcherNetworkLayer udpInterface;
     private int localSequenceNumber;
     private int sessionID; // given by ATEM switcher upon connect
@@ -34,7 +37,7 @@ public class BlackmagicAtemSwitcherTransportLayer
      */
     protected BlackmagicAtemSwitcherTransportLayer(String switcherIp, BiConsumer<String, byte[]> dataFieldAvailableConsumer) throws Exception
     {
-        this.udpInterface = new BlackmagicAtemSwitcherNetworkLayer(9910, switcherIp, this::rxPacketAvailable);
+        this.udpInterface = new BlackmagicAtemSwitcherNetworkLayer(ATEM_UDP_CONTROL_PORT, switcherIp, this::rxPacketAvailable);
         this.dataFieldAvailableConsumer = dataFieldAvailableConsumer;
 
         // initialize the transport layer's UDP reception loop at 2Hz
@@ -42,13 +45,12 @@ public class BlackmagicAtemSwitcherTransportLayer
             try
             {
                 this.doInitializationSequence();
-                //this.runLoop();
             } catch (Throwable e)
             {
-                logger.error("Error in transport layer loop", e);
+                logger.error("Cannot initialize Blackmagic switcher", e);
                 this.initializationComplete = false;
             }
-        }, 500, 500, TimeUnit.MILLISECONDS);
+        }, 0, 2, TimeUnit.SECONDS);
     }
 
     /**
@@ -62,6 +64,14 @@ public class BlackmagicAtemSwitcherTransportLayer
         try
         {
             packet.getPayloadFields().forEach(this.dataFieldAvailableConsumer);
+
+            // TODO
+            logger.info("new packet received: {}", packet);
+            if (packet.isFlag0Reliable())
+            {
+                this.sendAcknowledgementPacket(packet);
+            }
+
         } catch (Exception e)
         {
             logger.info("Cannot process packet payload", e);
@@ -178,17 +188,51 @@ public class BlackmagicAtemSwitcherTransportLayer
         this.udpInterface.getReceivedPacketQueue().clear();
         this.udpInterface.sendBlocking(packet);
 
-        // receive the ACK for the packet
-        final BlackmagicAtemSwitcherPacket rx = this.udpInterface.getReceivedPacketQueue().poll(3, TimeUnit.SECONDS);
-        if (rx == null)
+        // receive the ACK/acknowledgement number for the packet we just sent (or throw an exception)
+        logger.info("Received command response: {}", this.waitForAcknowledgementOrThrowEx(localSeqNum));
+    }
+
+    /**
+     * When we send acknowledgement packets (with the ACK or SYN flags set)
+     * we DO NOT increment the local sequence number in the outgoing packet.
+     * See documentation: <a href="https://docs.openswitcher.org/udptransport.html">link</a>.
+     *
+     * @param receivedPacket
+     *
+     * @throws Exception device communication error
+     */
+    private void sendAcknowledgementPacket(BlackmagicAtemSwitcherPacket receivedPacket) throws Exception
+    {
+        final BlackmagicAtemSwitcherPacket outgoing = new BlackmagicAtemSwitcherPacket(false, false, false, false, true,
+                this.sessionID, receivedPacket.getLocalSequenceNumber(), 0, 0, null, new byte[0]);
+        this.udpInterface.sendBlocking(outgoing);
+    }
+
+    /**
+     * Waits for the received packet...
+     *
+     * @param acknowledgementNumber
+     * @return
+     * @throws Exception
+     */
+    private BlackmagicAtemSwitcherPacket waitForAcknowledgementOrThrowEx(int acknowledgementNumber) throws Exception
+    {
+        int timeoutMs = 3000;
+        while (timeoutMs > 0)
         {
-            throw new Exception("Never received a response for the command....");
-        } else if (!rx.isFlag4ACK() || rx.getAcknowledgementNumber() != localSeqNum)
-        {
-            throw new Exception("The received packet from the switcher did not acknowledge the command " + cmd);
-        } else
-        {
-            logger.info("Received command response: {}", rx);
+            final Optional<BlackmagicAtemSwitcherPacket> packet = this.udpInterface.getReceivedPacketQueue().stream()
+                    .filter(p -> p.isFlag4ACK() && p.getAcknowledgementNumber() == acknowledgementNumber).findFirst();
+            if (packet.isPresent())
+            {
+                return packet.get();
+            } else
+            {
+                timeoutMs -= 100;
+                Thread.sleep(100);
+            }
         }
+
+        // timeout, we never saw the acknowledgement from the switcher
+        throw new Exception("Timeout while waiting for acknowledgement on packet sequence number: " + acknowledgementNumber);
     }
 }

@@ -230,6 +230,11 @@ public class PtzCameraUi extends JPanel
         });
     }
 
+    public JLabel getLabelCameraStatus()
+    {
+        return this.labelCameraStatus;
+    }
+
     /**
      * JFormDesigner Auto-Generated Code.
      */

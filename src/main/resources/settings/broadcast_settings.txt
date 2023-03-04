@@ -1,3 +1,3 @@
 wallCameraIp=192.168.86.32
 overheadCameraIp=192.168.86.31
-broadcastSwitcherIp=127.0.0.1
+broadcastSwitcherIp=192.168.86.222

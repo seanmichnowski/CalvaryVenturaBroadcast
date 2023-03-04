@@ -3,6 +3,7 @@ package com.calvaryventura.broadcast.switcher.control;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.DatatypeConverter;
 import java.lang.invoke.MethodHandles;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -75,7 +76,7 @@ public class BlackmagicAtemSwitcherNetworkLayer
                     // parse packet
                     final byte[] b = new byte[packet.getLength()];
                     System.arraycopy(packet.getData(), 0, b, 0, packet.getLength());
-                    // TODO logger.info("***************REceived packet {} and {}", packet.getLength(), DatatypeConverter.printHexBinary(b));
+                    logger.info("***************REceived packet {} and {}", packet.getLength(), DatatypeConverter.printHexBinary(b));
 
                     final BlackmagicAtemSwitcherPacket p = new BlackmagicAtemSwitcherPacket(packet.getData(), packet.getLength());
                     this.receivedPacketQueue.put(p);

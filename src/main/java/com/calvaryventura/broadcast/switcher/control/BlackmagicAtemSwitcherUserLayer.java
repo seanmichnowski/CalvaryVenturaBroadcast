@@ -4,9 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 /**
- * TODO
+ * Top-level control for the Blackmagic ATEM video switcher.
+ * Messaging documentation: <a href="https://docs.openswitcher.org/index.html">link</a>.
  * <p>
  * There is a {@link BlackmagicAtemSwitcherTransportLayer} which lives inside this class,
  * and a {@link BlackmagicAtemSwitcherNetworkLayer} which lives inside of that one.
@@ -14,29 +20,31 @@ import java.lang.invoke.MethodHandles;
 public class BlackmagicAtemSwitcherUserLayer
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private final BlackmagicAtemSwitcherTransportLayer transportLayer;
-
-    private final boolean[] atemTransitionInTransition = new boolean[2];
-    private final int[] atemTransitionFramesRemaining = new int[2];
-    private final int[] atemTransitionPosition = new int[2];
-    private final boolean[] atemFadeToBlackStateFullyBlack = new boolean[2];
-    private final boolean[] atemFadeToBlackStateInTransition = new boolean[2];
-    private final boolean[] atemFadeToBlackStateFramesRemaining = new boolean[2];
-    private final int[] atemAuxSourceInput = new int[6];
-    private final int[] atemTallyByIndexTallyFlags = new int[21];
-
+    private BlackmagicAtemSwitcherTransportLayer transportLayer;
     private int currentVideoPreviewIdx;
     private int currentVideoProgramIdx;
     private int currentVideoAuxIdx;
-    private boolean upstreamKeyOn;
+    private boolean upstreamKeyOnAir;
     private boolean fadeToBlackOn;
+    private boolean fadeToBlackInProgress;
     private int transitionPosition;
+    private boolean transitionInProgress;
+    private int[] tallyLightsPerVideoIndexes;
+
+    private final List<Consumer<Boolean>> switcherConnectionStatusConsumer = new ArrayList<>();
+    private final List<Consumer<Integer>> programVideoSourceChangedConsumer = new ArrayList<>();
+    private final List<Consumer<Integer>> previewVideoSourceChangedConsumer = new ArrayList<>();
+    private final List<Consumer<Integer>> auxVideoSourceChangedConsumer = new ArrayList<>();
+    private final List<Consumer<Boolean>> upstreamKeyOnAirConsumer = new ArrayList<>();
+    private final List<Consumer<Boolean>> fadeToBlackActiveConsumer = new ArrayList<>();
+    private final List<Consumer<Boolean>> fadeToBlackInTransitionConsumer = new ArrayList<>();
+    private final List<Consumer<Boolean>> transitionInProgressConsumer = new ArrayList<>();
+    private final List<Consumer<Integer>> transitionPositionConsumer = new ArrayList<>();
 
 // TODO
 //  have a callback from the transport layer for switcher connection/init status (or maybe use a CONN command mnemonic?)
-//  implement more status field parsing via pyatm
-//  uncomment in the network layer and see why we aren't properly acknowledging the empty packet?
 //  use companion and see if there's a way to get the current status after we send a command, or just an ACK?
+//  OK, maybe wrap the transport layer's send command in a try/catch and have another callback to the user layer on connection quality and configuration...
 
     /**
      * Creates the transport layer for low-level messaging.
@@ -44,10 +52,17 @@ public class BlackmagicAtemSwitcherUserLayer
      *
      * @param switcherIp IP address for the Blackmagic ATEM switcher
      */
-    public BlackmagicAtemSwitcherUserLayer(String switcherIp) throws Exception
+    public void initialize(String switcherIp)
     {
-        this.transportLayer = new BlackmagicAtemSwitcherTransportLayer(switcherIp,
-                this::parseSwitcherStatusFromTransportLayer);
+        try
+        {
+            this.transportLayer = new BlackmagicAtemSwitcherTransportLayer(switcherIp,
+                    this::parseSwitcherStatusFromTransportLayer);
+        } catch (Exception e)
+        {
+            logger.error("Unable to start communication to the switcher", e);
+            this.switcherConnectionStatusConsumer.forEach(s -> s.accept(false));
+        }
     }
 
     /**
@@ -60,62 +75,187 @@ public class BlackmagicAtemSwitcherUserLayer
     {
         switch (cmd)
         {
+            // program video selection
             case "PrgI":
                 this.currentVideoProgramIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
                 logger.info("Current program video: {}", this.currentVideoProgramIdx);
+                this.programVideoSourceChangedConsumer.forEach(c -> c.accept(this.currentVideoProgramIdx));
                 break;
+
+            // preview video selection
             case "PrvI":
                 this.currentVideoPreviewIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
                 logger.info("Current preview video: {}", this.currentVideoPreviewIdx);
+                this.previewVideoSourceChangedConsumer.forEach(c -> c.accept(this.currentVideoPreviewIdx));
                 break;
+
+            // aux video output index (byte 1 is the aux output, but we only have one)
             case "AuxS":
-                logger.info("Aux video output: TODO");
+                this.currentVideoAuxIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
+                logger.info("Aux video output: {}", this.currentVideoAuxIdx);
                 break;
+
+            // upstream key (byte 1 is the keyer index, but we only have one)
             case "KeOn":
-                logger.info("Upstream key: TODO");
+                this.upstreamKeyOnAir = data[2] != 0;
+                logger.info("Upstream key: {}", this.upstreamKeyOnAir);
+                this.upstreamKeyOnAirConsumer.forEach(c -> c.accept(this.upstreamKeyOnAir));
                 break;
+
+            // fade to black (red blinking light on the panel when it's on)
             case "FtbP":
-                logger.info("Fade to black: TODO");
+                this.fadeToBlackOn = data[1] != 0;
+                this.fadeToBlackInProgress = data[2] != 0;
+                logger.info("Fade to black on: {}, in progress: {}", this.fadeToBlackOn, this.fadeToBlackInProgress);
                 break;
+
+            // transition position
+            case "TrPs":
+                this.transitionInProgress = data[1] != 0;
+                this.transitionPosition = BlackmagicAtemSwitcherPacketUtils.word(data[4], data[5]); // 0-9999
+                logger.info("Transition in progress: {}, position: {}", this.transitionInProgress, this.transitionPosition);
+                break;
+
+            // tally lights (bit0=PROGRAM, bit1=PREVIEW, repeated for every tally light)
+            case "TlIn":
+                this.tallyLightsPerVideoIndexes = new int[BlackmagicAtemSwitcherPacketUtils.word(data[0], data[1])];
+                IntStream.range(0, this.tallyLightsPerVideoIndexes.length).boxed()
+                        .forEach(i -> this.tallyLightsPerVideoIndexes[i] = data[2 + i]);
+                logger.info("Tally lights: {}", Arrays.toString(this.tallyLightsPerVideoIndexes));
+                break;
+
+            // tally lights given by source index
+            case "TlSr":
+                logger.info("Tally lights by source index....");
+                break;
+
+            // audio input configuration
+            case "AMIP":
+                logger.info("AUDIO input configuration.... TODO");
+                break;
+
+            // there are MANY more fields we don't process
             default:
                 break;
         }
     }
 
+    /**
+     * @return index of the current preview video
+     */
     public int getCurrentVideoPreviewIdx()
     {
         return this.currentVideoPreviewIdx;
     }
 
+    /**
+     * @return index of the current program video
+     */
     public int getCurrentVideoProgramIdx()
     {
         return this.currentVideoProgramIdx;
     }
 
+    /**
+     * @return index of the current aux video
+     */
     public int getCurrentVideoAuxIdx()
     {
         return this.currentVideoAuxIdx;
     }
 
-    public boolean isUpstreamKeyOn()
+    /**
+     * @return upstream key is On Air
+     */
+    public boolean isUpstreamKeyOnAir()
     {
-        return this.upstreamKeyOn;
+        return this.upstreamKeyOnAir;
     }
 
+    /**
+     * @return fade to black is active (blinking red front panel light)
+     */
     public boolean isFadeToBlackOn()
     {
         return this.fadeToBlackOn;
     }
 
-    public int getTransitionPosition()
+    /**
+     * @return fade to black is in progress
+     */
+    public boolean isFadeToBlackInProgress()
     {
-        return this.transitionPosition;
+        return fadeToBlackInProgress;
     }
 
     /**
-     * TODO
-     * @param videoSourceIdx
-     * @throws Exception
+     * @param programVideoSourceChangedConsumer fired when the program video source is changed
+     */
+    public void addProgramVideoSourceChangedConsumer(Consumer<Integer> programVideoSourceChangedConsumer)
+    {
+        this.programVideoSourceChangedConsumer.add(programVideoSourceChangedConsumer);
+    }
+
+    /**
+     * @param previewVideoSourceChangedConsumer fired when the preview video source is changed
+     */
+    public void addPreviewVideoSourceChangedConsumer(Consumer<Integer> previewVideoSourceChangedConsumer)
+    {
+        this.previewVideoSourceChangedConsumer.add(previewVideoSourceChangedConsumer);
+    }
+
+    /**
+     * @param auxVideoSourceChangedConsumer fired when the AUX video output is changed
+     */
+    public void addAuxVideoSourceChangedConsumer(Consumer<Integer> auxVideoSourceChangedConsumer)
+    {
+        this.auxVideoSourceChangedConsumer.add(auxVideoSourceChangedConsumer);
+    }
+
+    /**
+     * @param upstreamKeyOnAirConsumer fired when the upstream key is on or off air
+     */
+    public void addUpstreamKeyOnAirConsumer(Consumer<Boolean> upstreamKeyOnAirConsumer)
+    {
+        this.upstreamKeyOnAirConsumer.add(upstreamKeyOnAirConsumer);
+    }
+
+    /**
+     * @param fadeToBlackActiveConsumer fired when the fade to black status changes
+     */
+    public void addFadeToBlackActiveConsumer(Consumer<Boolean> fadeToBlackActiveConsumer)
+    {
+        this.fadeToBlackActiveConsumer.add(fadeToBlackActiveConsumer);
+    }
+
+    /**
+     * @param fadeToBlackInTransitionConsumer fired when the fade to black is in transition
+     */
+    public void addFadeToBlackInTransitionConsumer(Consumer<Boolean> fadeToBlackInTransitionConsumer)
+    {
+        this.fadeToBlackInTransitionConsumer.add(fadeToBlackInTransitionConsumer);
+    }
+
+    /**
+     * @param transitionInProgressConsumer fired when the transition is in progress
+     */
+    public void addTransitionInProgressConsumer(Consumer<Boolean> transitionInProgressConsumer)
+    {
+        this.transitionInProgressConsumer.add(transitionInProgressConsumer);
+    }
+
+    /**
+     * @param transitionPositionConsumer fired when the transition position changes (range 0-9999)
+     */
+    public void addTransitionPositionConsumer(Consumer<Integer> transitionPositionConsumer)
+    {
+        this.transitionPositionConsumer.add(transitionPositionConsumer);
+    }
+
+    /**
+     * @param videoSourceIdx index of the video source to set as program
+     *
+     * @throws Exception device communication error
      */
     public void setProgramVideo(int videoSourceIdx) throws Exception
     {
@@ -125,9 +265,9 @@ public class BlackmagicAtemSwitcherUserLayer
     }
 
     /**
-     * TODO
-     * @param videoSourceIdx
-     * @throws Exception
+     * @param videoSourceIdx index of the video source to set as preview
+     *
+     * @throws Exception device communication error
      */
     public void setPreviewVideo(int videoSourceIdx) throws Exception
     {
@@ -137,54 +277,45 @@ public class BlackmagicAtemSwitcherUserLayer
     }
 
     /**
-     * Set Cut; M/E
-     * mE 	0: ME1, 1: ME2
+     * Equivalent to the user pressing the CUT button on the front panel.
+     *
+     * @throws Exception device communication error
      */
-    public void performCutME(byte mE) throws Exception
+    public void performCut() throws Exception
     {
-        this.transportLayer.sendCommand("DCut", new byte[0]); // TODO send 4 0 bytes?
+        this.transportLayer.sendCommand("DCut", new byte[4]);
     }
 
     /**
-     * Set Auto; M/E
-     * mE 	0: ME1, 1: ME2
+     * Equivalent to the user pressing the AUTO button on the front panel.
+     *
+     * @throws Exception device communication error
      */
-    public void performAutoME(byte mE) throws Exception
+    public void performAuto() throws Exception
     {
-        this.transportLayer.sendCommand("DAut", new byte[0]); // TODO send 4 0 bytes?
+        this.transportLayer.sendCommand("DAut", new byte[4]);
     }
 
     /**
-     * Get Transition Position; In Transition
-     * mE 	0: ME1, 1: ME2
+     * @return a transition is currently in progress
      */
-    public boolean getTransitionInTransition(int mE)
+    public boolean getTransitionInProgress()
     {
-        return atemTransitionInTransition[mE];
+        return this.transitionInProgress;
     }
 
     /**
-     * Get Transition Position; Frames Remaining
-     * mE 	0: ME1, 1: ME2
+     * @return position of the transition (T-slider) bar, range 0-9999
      */
-    public int getTransitionFramesRemaining(int mE)
+    public int getTransitionPosition()
     {
-        return atemTransitionFramesRemaining[mE];
+        return this.transitionPosition;
     }
 
     /**
-     * Get Transition Position; Position
-     * mE 	0: ME1, 1: ME2
-     */
-    public int getTransitionPosition(int mE)
-    {
-        return atemTransitionPosition[mE];
-    }
-
-    /**
-     * Set Transition Position; Position
-     * mE 	0: ME1, 1: ME2
-     * position 	0-9999
+     * @param position sets the transition (T-slider), range 0-9999
+     *
+     * @throws Exception device communication error
      */
     public void setTransitionPosition(int position) throws Exception
     {
@@ -194,81 +325,42 @@ public class BlackmagicAtemSwitcherUserLayer
     }
 
     /**
-     * Set Keyer On Air; Enabled
-     * mE 	0: ME1, 1: ME2
-     * keyer 	0-3: Keyer 1-4
-     * enabled 	Bit 0: On/Off
+     * Byte 1 is the keyer index, but we only have one.
+     *
+     * @param enabled sets the upstream keyer On Air
+     *
+     * @throws Exception device communication error
      */
-    public void setKeyerOnAirEnabled(byte mE, byte keyer, boolean enabled) throws Exception
+    public void setKeyerOnAirEnabled(boolean enabled) throws Exception
     {
-        this.transportLayer.sendCommand("CKOn", new byte[]{0, keyer, (byte) (enabled ? 1 : 0), 0}); // TODO can I send 3 bytes?
+        this.transportLayer.sendCommand("CKOn", new byte[]{0, 0, (byte) (enabled ? 1 : 0), 0});
     }
 
     /**
-     * Get Fade-To-Black State; Fully Black
-     * mE 	0: ME1, 1: ME2
+     * Triggers the fade to black transition.
+     *
+     * @throws Exception device communication error
      */
-    public boolean getFadeToBlackStateFullyBlack(int mE)
+    public void performFadeToBlack() throws Exception
     {
-        return atemFadeToBlackStateFullyBlack[mE];
+        this.transportLayer.sendCommand("FtbA", new byte[4]);
     }
 
     /**
-     * Get Fade-To-Black State; In Transition
-     * mE 	0: ME1, 1: ME2
+     * @param input index of the video input, see video source list
+     *
+     * @throws Exception device communication error
      */
-    public boolean getFadeToBlackStateInTransition(int mE)
-    {
-        return atemFadeToBlackStateInTransition[mE];
-    }
-
-    /**
-     * Get Fade-To-Black State; Frames Remaining
-     * mE 	0: ME1, 1: ME2
-     */
-    public boolean getFadeToBlackStateFramesRemaining(int mE)
-    {
-        return atemFadeToBlackStateFramesRemaining[mE];
-    }
-
-    /**
-     * Set Fade-To-Black; M/E
-     * mE 	0: ME1, 1: ME2
-     */
-    public void performFadeToBlackME(byte mE) throws Exception
-    {
-        this.transportLayer.sendCommand("FtbA", new byte[]{0, 0x02, 0, 0}); // TODO can I send 2 bytes?
-    }
-
-    /**
-     * Get Aux Source; Input
-     * aUXChannel 	0-5: Aux 1-6
-     */
-    public int getAuxSourceInput(int aUXChannel)
-    {
-        return atemAuxSourceInput[aUXChannel];
-    }
-
-    /**
-     * Set Aux Source; Input
-     * aUXChannel 	0-5: Aux 1-6
-     * input 	(See video source list)
-     */
-    public void setAuxSourceInput(byte aUXChannel, int input) throws Exception
+    public void setAuxSourceInput(int input) throws Exception
     {
         final byte high = (byte) ((input >> 8) & 0xFF);
         final byte low = (byte) (input & 0xFF);
-        this.transportLayer.sendCommand("CAuS", new byte[]{1, aUXChannel, high, low});
+        this.transportLayer.sendCommand("CAuS", new byte[]{1, 0, high, low});
     }
 
-    /**
-     * Get Tally By Index; Tally Flags
-     * sources 	0-20: Number of
-     */
-    public int getTallyByIndexTallyFlags(int sources)
-    {
-        return atemTallyByIndexTallyFlags[sources];
-    }
+
+
+
 
     public int getVideoSrcIndex(int videoSrc)
     {
