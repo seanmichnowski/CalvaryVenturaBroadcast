@@ -46,14 +46,6 @@ public class PtzCameraUi extends JPanel
     }
 
     /**
-     * @param name display name of this camera corresponding to this UI control
-     */
-    public void setCameraName(String name)
-    {
-        // TODO
-    }
-
-    /**
      * @param callback mechanism to pass UI events OUT of this class
      */
     public void setCallback(IPtzCameraUiCallbacks callback)
@@ -78,8 +70,10 @@ public class PtzCameraUi extends JPanel
     /**
      * TODO
      */
-    public void clearPreviewAndProgramHighlights()
+    public boolean clearPreviewAndProgramHighlights()
     {
+        this.disablePresetShowing();
+        return true;
     }
 
     /**

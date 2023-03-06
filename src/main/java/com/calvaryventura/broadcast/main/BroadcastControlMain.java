@@ -23,10 +23,10 @@ import org.slf4j.LoggerFactory;
 public class BroadcastControlMain extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private static final String UCAT_SETTINGS_JAR_RESOURCE = "/settings/broadcast_settings.txt"; // src/main/resources
     private final BlackmagicAtemSwitcherUserLayer switcherControl = new BlackmagicAtemSwitcherUserLayer();
     private final PtzCameraCommandSender wallCameraCommandSender;
     private final PtzCameraCommandSender overheadCameraCommandSender;
-    private static final String UCAT_SETTINGS_JAR_RESOURCE = "/settings/broadcast_settings.txt"; // src/main/resources
 
     /**
      * Main entry point for application.
@@ -98,13 +98,13 @@ public class BroadcastControlMain extends JFrame
             @Override
             public boolean callPreviewPressed(int presetIdx)
             {
-                return wallCameraCommandSender.callPreset(presetIdx);
+                return wallCameraCommandSender.callPreset(presetIdx) && switcherControl.setPreviewVideo(4) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return wallCameraCommandSender.callPreset(presetIdx);
+                return wallCameraCommandSender.callPreset(presetIdx) && switcherControl.setProgramVideo(4) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
@@ -131,19 +131,19 @@ public class BroadcastControlMain extends JFrame
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return wallCameraCommandSender.setPreset(presetIdx);
+                return overheadCameraCommandSender.setPreset(presetIdx);
             }
 
             @Override
             public boolean callPreviewPressed(int presetIdx)
             {
-                return wallCameraCommandSender.callPreset(presetIdx);
+                return overheadCameraCommandSender.callPreset(presetIdx) && switcherControl.setPreviewVideo(5) && leftCameraControlPanel.clearPreviewAndProgramHighlights(); // TODO use macro
             }
 
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return wallCameraCommandSender.callPreset(presetIdx);
+                return overheadCameraCommandSender.callPreset(presetIdx) && switcherControl.setProgramVideo(5) && leftCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override

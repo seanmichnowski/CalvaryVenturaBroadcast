@@ -257,11 +257,19 @@ public class BlackmagicAtemSwitcherUserLayer
      *
      * @throws Exception device communication error
      */
-    public void setProgramVideo(int videoSourceIdx) throws Exception
+    public boolean setProgramVideo(int videoSourceIdx)
     {
-        final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
-        final byte low = (byte) (videoSourceIdx & 0xFF);
-        this.transportLayer.sendCommand("CPgI", new byte[]{0, 0, high, low});
+        try
+        {
+            final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
+            final byte low = (byte) (videoSourceIdx & 0xFF);
+            this.transportLayer.sendCommand("CPgI", new byte[]{0, 0, high, low});
+            return true;
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
@@ -269,11 +277,19 @@ public class BlackmagicAtemSwitcherUserLayer
      *
      * @throws Exception device communication error
      */
-    public void setPreviewVideo(int videoSourceIdx) throws Exception
+    public boolean setPreviewVideo(int videoSourceIdx)
     {
-        final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
-        final byte low = (byte) (videoSourceIdx & 0xFF);
-        this.transportLayer.sendCommand("CPvI", new byte[]{0, 0, high, low});
+        try
+        {
+            final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
+            final byte low = (byte) (videoSourceIdx & 0xFF);
+            this.transportLayer.sendCommand("CPvI", new byte[]{0, 0, high, low});
+            return true;
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
