@@ -1,14 +1,23 @@
 package com.calvaryventura.broadcast.switcher.ui;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * TODO
+ * Simple control panel for the video switcher. Contains functions like FadeToBlack, CUT, etc.
+ * Call {@link #setVideoSourceNamesAndSwitcherIndexes(Map)} early in the initialization process
+ * which will dynamically create buttons for program and preview, one button for each video source.
  */
 public class BroadcastSwitcherUi extends JPanel
 {
+    // these are fired when the user presses UI buttons to change the video switcher
     private Consumer<Integer> previewSourceChanged;
     private Consumer<Integer> programSourceChanged;
     private Consumer<Boolean> fadeToBlackPressed;
@@ -16,8 +25,11 @@ public class BroadcastSwitcherUi extends JPanel
     private Consumer<Boolean> autoPressed;
     private Consumer<Boolean> cutPressed;
 
+    // each entry represents one video input source for the UI
+    private final List<BroadcastSwitcherUiVideoEntry> videoInputSourceEntries = new ArrayList<>();
+
     /**
-     * Initializes the HTTP connection to the Blackmagic switcher.
+     * Creates the basic UI elements and callbacks.
      */
     public BroadcastSwitcherUi()
     {
@@ -26,42 +38,52 @@ public class BroadcastSwitcherUi extends JPanel
         this.buttonFadeToBlack.addActionListener(e -> this.fadeToBlackPressed.accept(true));
         this.buttonCut.addActionListener(e -> this.cutPressed.accept(true));
         this.buttonFade.addActionListener(e -> this.autoPressed.accept(true));
-        this.buttonOverheadPreview.addActionListener(e -> this.previewSourceChanged.accept(6));
-        this.buttonWallPreview.addActionListener(e -> this.previewSourceChanged.accept(5));
-        this.buttonBoothPreview.addActionListener(e -> this.previewSourceChanged.accept(4));
-        this.buttonProclaimPreview.addActionListener(e -> this.previewSourceChanged.accept(3));
-        this.buttonOverheadProgram.addActionListener(e -> this.programSourceChanged.accept(6));
-        this.buttonWallProgram.addActionListener(e -> this.programSourceChanged.accept(5));
-        this.buttonBoothProgram.addActionListener(e -> this.programSourceChanged.accept(4));
-        this.buttonProclaimProgram.addActionListener(e -> this.programSourceChanged.accept(3));
     }
 
-    public void setPreviewSourceChanged(Consumer<Integer> previewSourceChanged)
+    /**
+     * Call this early in the initialization process to set the program/preview buttons in this UI.
+     * A program and a preview button is created for each element in this map. Pressing these
+     * buttons in the UI triggers that corresponding video source index to be fired in a callback.
+     *
+     * @param videoSourceNamesAndSwitcherIndexes lists the [name, index] of each type of buttons to create
+     */
+    public void setVideoSourceNamesAndSwitcherIndexes(Map<String, Integer> videoSourceNamesAndSwitcherIndexes)
+    {
+        // for each of the video inputs, create a structure with program and preview buttons
+        videoSourceNamesAndSwitcherIndexes.forEach((name, index) ->
+                this.videoInputSourceEntries.add(new BroadcastSwitcherUiVideoEntry(name, index)));
+
+        // add these buttons to the overall UI
+        this.videoInputSourceEntries.forEach(entry -> this.panelProgPrevButtonHolder.add(entry.createPreviewProgramButtonsPanel()));
+        this.panelProgPrevButtonHolder.revalidate();
+    }
+
+    public void onPreviewSourceChanged(Consumer<Integer> previewSourceChanged)
     {
         this.previewSourceChanged = previewSourceChanged;
     }
 
-    public void setProgramSourceChanged(Consumer<Integer> programSourceChanged)
+    public void onProgramSourceChanged(Consumer<Integer> programSourceChanged)
     {
         this.programSourceChanged = programSourceChanged;
     }
 
-    public void setFadeToBlackPressed(Consumer<Boolean> fadeToBlackPressed)
+    public void onFadeToBlackPressed(Consumer<Boolean> fadeToBlackPressed)
     {
         this.fadeToBlackPressed = fadeToBlackPressed;
     }
 
-    public void setLyricsPressed(Consumer<Boolean> lyricsPressed)
+    public void onLyricsPressed(Consumer<Boolean> lyricsPressed)
     {
         this.lyricsPressed = lyricsPressed;
     }
 
-    public void setAutoPressed(Consumer<Boolean> autoPressed)
+    public void onAutoPressed(Consumer<Boolean> autoPressed)
     {
         this.autoPressed = autoPressed;
     }
 
-    public void setCutPressed(Consumer<Boolean> cutPressed)
+    public void onCutPressed(Consumer<Boolean> cutPressed)
     {
         this.cutPressed = cutPressed;
     }
@@ -103,10 +125,7 @@ public class BroadcastSwitcherUi extends JPanel
      */
     public void setPreviewSourceStatus(int previewSourceActive)
     {
-        this.buttonProclaimPreview.setBackground(previewSourceActive == 3 ? Color.GREEN : Color.BLACK);
-        this.buttonBoothPreview.setBackground(previewSourceActive == 4 ? Color.GREEN : Color.BLACK);
-        this.buttonWallPreview.setBackground(previewSourceActive == 5 ? Color.GREEN : Color.BLACK);
-        this.buttonOverheadPreview.setBackground(previewSourceActive == 6 ? Color.GREEN : Color.BLACK);
+        this.videoInputSourceEntries.forEach(entry -> entry.setPreviewVideoSourceActive(previewSourceActive));
     }
 
     /**
@@ -114,10 +133,74 @@ public class BroadcastSwitcherUi extends JPanel
      */
     public void setProgramSourceStatus(int programSourceActive)
     {
-        this.buttonProclaimProgram.setBackground(programSourceActive == 3 ? Color.RED : Color.BLACK);
-        this.buttonBoothProgram.setBackground(programSourceActive == 4 ? Color.RED : Color.BLACK);
-        this.buttonWallProgram.setBackground(programSourceActive == 5 ? Color.RED : Color.BLACK);
-        this.buttonOverheadProgram.setBackground(programSourceActive == 6 ? Color.RED : Color.BLACK);
+        this.videoInputSourceEntries.forEach(entry -> entry.setProgramSourceStatus(programSourceActive));
+    }
+
+    /**
+     * Internal class which holds two buttons for each video source entry.
+     * The buttons are for preview and program. This class sets up the callback
+     * actions for the buttons, and also highlights the button background
+     * colors when the broadcast switcher status has that button's video
+     * source index active.
+     */
+    private class BroadcastSwitcherUiVideoEntry
+    {
+        private final int videoSourceIndex;
+        private final JButton previewButton;
+        private final JButton programButton;
+
+        /**
+         * @param name             name of this video source input
+         * @param videoSourceIndex physical hardware connection index of this video source
+         */
+        private BroadcastSwitcherUiVideoEntry(String name, int videoSourceIndex)
+        {
+            this.videoSourceIndex = videoSourceIndex;
+
+            // create the preview button
+            this.previewButton = new JButton(name);
+            this.previewButton.setBackground(Color.BLACK);
+            this.previewButton.setForeground(Color.CYAN);
+            this.previewButton.setFont(new Font("Segoe", Font.BOLD, 16));
+            this.previewButton.setBorder(new CompoundBorder(new EmptyBorder(0,5,5,5), new LineBorder(Color.CYAN)));
+            this.previewButton.addActionListener(e -> previewSourceChanged.accept(videoSourceIndex));
+
+            // create the program button
+            this.programButton = new JButton(name);
+            this.programButton.setBackground(Color.BLACK);
+            this.programButton.setForeground(Color.CYAN);
+            this.programButton.setFont(new Font("Segoe", Font.BOLD, 16));
+            this.programButton.setBorder(new CompoundBorder(new EmptyBorder(5,5,0,5), new LineBorder(Color.CYAN)));
+            this.programButton.addActionListener(e -> programSourceChanged.accept(videoSourceIndex));
+        }
+
+        /**
+         * @return creates a panel which holds these two buttons (preview on top)
+         */
+        private JPanel createPreviewProgramButtonsPanel()
+        {
+            final JPanel prevProgPanel = new JPanel(new GridLayout(2, 1));
+            prevProgPanel.setOpaque(false);
+            prevProgPanel.add(this.previewButton);
+            prevProgPanel.add(this.programButton);
+            return prevProgPanel;
+        }
+
+        /**
+         * @param previewSourceActive index of the active preview video source
+         */
+        private void setPreviewVideoSourceActive(int previewSourceActive)
+        {
+            this.previewButton.setBackground(previewSourceActive == this.videoSourceIndex ? Color.GREEN : Color.BLACK);
+        }
+
+        /**
+         * @param programSourceActive index of the active program video source
+         */
+        private void setProgramSourceStatus(int programSourceActive)
+        {
+            this.programButton.setBackground(programSourceActive == this.videoSourceIndex ? Color.RED : Color.BLACK);
+        }
     }
 
     /**
@@ -134,15 +217,8 @@ public class BroadcastSwitcherUi extends JPanel
         JPanel hSpacer1 = new JPanel(null);
         JPanel panel2 = new JPanel();
         JLabel labelPreview = new JLabel();
-        buttonProclaimPreview = new JButton();
-        buttonBoothPreview = new JButton();
-        buttonWallPreview = new JButton();
-        buttonOverheadPreview = new JButton();
+        panelProgPrevButtonHolder = new JPanel();
         JLabel labelProgram = new JLabel();
-        buttonProclaimProgram = new JButton();
-        buttonBoothProgram = new JButton();
-        buttonWallProgram = new JButton();
-        buttonOverheadProgram = new JButton();
 
         //======== this ========
         setBackground(Color.black);
@@ -197,22 +273,26 @@ public class BroadcastSwitcherUi extends JPanel
         }
         add(panel1, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 20), 0, 0));
+            new Insets(0, 0, 0, 5), 0, 0));
 
         //---- hSpacer1 ----
-        hSpacer1.setMinimumSize(new Dimension(50, 12));
-        hSpacer1.setPreferredSize(new Dimension(50, 10));
+        hSpacer1.setMinimumSize(new Dimension(40, 12));
+        hSpacer1.setPreferredSize(new Dimension(40, 10));
         hSpacer1.setOpaque(false);
         hSpacer1.setName("hSpacer1");
         add(hSpacer1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 20), 0, 0));
+            new Insets(0, 0, 0, 5), 0, 0));
 
         //======== panel2 ========
         {
             panel2.setOpaque(false);
             panel2.setName("panel2");
-            panel2.setLayout(new GridLayout(2, 4, 10, 10));
+            panel2.setLayout(new GridBagLayout());
+            ((GridBagLayout)panel2.getLayout()).columnWidths = new int[] {0, 0, 0};
+            ((GridBagLayout)panel2.getLayout()).rowHeights = new int[] {0, 0, 0};
+            ((GridBagLayout)panel2.getLayout()).columnWeights = new double[] {0.0, 1.0, 1.0E-4};
+            ((GridBagLayout)panel2.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
 
             //---- labelPreview ----
             labelPreview.setText("<html><u>Preview<br>selection:</u></html>");
@@ -221,39 +301,19 @@ public class BroadcastSwitcherUi extends JPanel
             labelPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
             labelPreview.setHorizontalAlignment(SwingConstants.RIGHT);
             labelPreview.setName("labelPreview");
-            panel2.add(labelPreview);
+            panel2.add(labelPreview, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 10, 10), 0, 0));
 
-            //---- buttonProclaimPreview ----
-            buttonProclaimPreview.setText("Proclaim");
-            buttonProclaimPreview.setForeground(Color.cyan);
-            buttonProclaimPreview.setBackground(Color.black);
-            buttonProclaimPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonProclaimPreview.setName("buttonProclaimPreview");
-            panel2.add(buttonProclaimPreview);
-
-            //---- buttonBoothPreview ----
-            buttonBoothPreview.setText("Booth");
-            buttonBoothPreview.setForeground(Color.cyan);
-            buttonBoothPreview.setBackground(Color.black);
-            buttonBoothPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonBoothPreview.setName("buttonBoothPreview");
-            panel2.add(buttonBoothPreview);
-
-            //---- buttonWallPreview ----
-            buttonWallPreview.setText("Wall");
-            buttonWallPreview.setForeground(Color.cyan);
-            buttonWallPreview.setBackground(Color.black);
-            buttonWallPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonWallPreview.setName("buttonWallPreview");
-            panel2.add(buttonWallPreview);
-
-            //---- buttonOverheadPreview ----
-            buttonOverheadPreview.setText("Overhead");
-            buttonOverheadPreview.setForeground(Color.cyan);
-            buttonOverheadPreview.setBackground(Color.black);
-            buttonOverheadPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonOverheadPreview.setName("buttonOverheadPreview");
-            panel2.add(buttonOverheadPreview);
+            //======== panelProgPrevButtonHolder ========
+            {
+                panelProgPrevButtonHolder.setOpaque(false);
+                panelProgPrevButtonHolder.setName("panelProgPrevButtonHolder");
+                panelProgPrevButtonHolder.setLayout(new BoxLayout(panelProgPrevButtonHolder, BoxLayout.X_AXIS));
+            }
+            panel2.add(panelProgPrevButtonHolder, new GridBagConstraints(1, 0, 1, 2, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 0), 0, 0));
 
             //---- labelProgram ----
             labelProgram.setText("<html><u>Program<br>selection:</u></html>");
@@ -262,39 +322,9 @@ public class BroadcastSwitcherUi extends JPanel
             labelProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
             labelProgram.setHorizontalAlignment(SwingConstants.RIGHT);
             labelProgram.setName("labelProgram");
-            panel2.add(labelProgram);
-
-            //---- buttonProclaimProgram ----
-            buttonProclaimProgram.setText("Proclaim");
-            buttonProclaimProgram.setForeground(Color.cyan);
-            buttonProclaimProgram.setBackground(Color.black);
-            buttonProclaimProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonProclaimProgram.setName("buttonProclaimProgram");
-            panel2.add(buttonProclaimProgram);
-
-            //---- buttonBoothProgram ----
-            buttonBoothProgram.setText("Booth");
-            buttonBoothProgram.setForeground(Color.cyan);
-            buttonBoothProgram.setBackground(Color.black);
-            buttonBoothProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonBoothProgram.setName("buttonBoothProgram");
-            panel2.add(buttonBoothProgram);
-
-            //---- buttonWallProgram ----
-            buttonWallProgram.setText("Wall");
-            buttonWallProgram.setForeground(Color.cyan);
-            buttonWallProgram.setBackground(Color.black);
-            buttonWallProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonWallProgram.setName("buttonWallProgram");
-            panel2.add(buttonWallProgram);
-
-            //---- buttonOverheadProgram ----
-            buttonOverheadProgram.setText("Overhead");
-            buttonOverheadProgram.setForeground(Color.cyan);
-            buttonOverheadProgram.setBackground(Color.black);
-            buttonOverheadProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonOverheadProgram.setName("buttonOverheadProgram");
-            panel2.add(buttonOverheadProgram);
+            panel2.add(labelProgram, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 10), 0, 0));
         }
         add(panel2, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -307,13 +337,6 @@ public class BroadcastSwitcherUi extends JPanel
     private JButton buttonFadeToBlack;
     private JButton buttonCut;
     private JButton buttonFade;
-    private JButton buttonProclaimPreview;
-    private JButton buttonBoothPreview;
-    private JButton buttonWallPreview;
-    private JButton buttonOverheadPreview;
-    private JButton buttonProclaimProgram;
-    private JButton buttonBoothProgram;
-    private JButton buttonWallProgram;
-    private JButton buttonOverheadProgram;
+    private JPanel panelProgPrevButtonHolder;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

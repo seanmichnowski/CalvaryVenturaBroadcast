@@ -172,24 +172,32 @@ public class BlackmagicAtemSwitcherTransportLayer
      * @param cmd  command mnemonic to send
      * @param data data associated with this command
      *
-     * @throws Exception communication error
+     * @return indication the command was sent to the switcher and acknowledged by the switcher
      */
-    protected void sendCommand(String cmd, byte[] data) throws Exception
+    protected boolean sendCommand(String cmd, byte[] data)
     {
-        // create the outgoing command packet
-        final Map<String, byte[]> map = new HashMap<>();
-        map.put(cmd, data);
-        final int localSeqNum = ++this.localSequenceNumber;
-        final BlackmagicAtemSwitcherPacket packet = new BlackmagicAtemSwitcherPacket(true, false, false, false, false,
-                this.sessionID, 0, 0, localSeqNum, map, null);
+        try
+        {
+            // create the outgoing command packet
+            final Map<String, byte[]> map = new HashMap<>();
+            map.put(cmd, data);
+            final int localSeqNum = ++this.localSequenceNumber;
+            final BlackmagicAtemSwitcherPacket packet = new BlackmagicAtemSwitcherPacket(true, false, false, false, false,
+                    this.sessionID, 0, 0, localSeqNum, map, null);
 
-        // send the packet
-        logger.info("Sending command '{}', data={}", cmd, DatatypeConverter.printHexBinary(data));
-        this.udpInterface.getReceivedPacketQueue().clear();
-        this.udpInterface.sendBlocking(packet);
+            // send the packet
+            logger.info("Sending command '{}', data={}", cmd, DatatypeConverter.printHexBinary(data));
+            this.udpInterface.getReceivedPacketQueue().clear();
+            this.udpInterface.sendBlocking(packet);
 
-        // receive the ACK/acknowledgement number for the packet we just sent (or throw an exception)
-        logger.info("Received command response: {}", this.waitForAcknowledgementOrThrowEx(localSeqNum));
+            // receive the ACK/acknowledgement number for the packet we just sent (or throw an exception)
+            logger.info("Received command response: {}", this.waitForAcknowledgementOrThrowEx(localSeqNum));
+            return true;
+        } catch (Exception e)
+        {
+            logger.error("Received error when sending command '{}' to the switcher", cmd, e);
+            return false;
+        }
     }
 
     /**

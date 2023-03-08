@@ -1,3 +1,8 @@
-wallCameraIp=192.168.86.32
-overheadCameraIp=192.168.86.31
-broadcastSwitcherIp=192.168.86.222
+leftCameraIp=192.168.86.32
+rightCameraIp=192.168.86.31
+videoSwitcherIp=192.168.86.222
+videoSwitcherInputSourceNames=PROCLAIM,BOOTH,LEFT,RIGHT
+videoSwitcherInputSourceIndexes=4,5,7,6
+lyricsOverlayInputSourceIndex=4
+
+# one day we could actually have another list of PTZ camera NAME's and IP's, similar to the switcher!

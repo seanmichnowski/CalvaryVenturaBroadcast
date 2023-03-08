@@ -5,7 +5,7 @@ new FormModel {
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 			"$columnSpecs": "0:1.0"
-			"$rowSpecs": "0:1.0, 0:0.1, 0, 0, 0"
+			"$rowSpecs": "0:1.0, 0:0.1, 0, 0"
 			"$hGap": 7
 			"$vGap": 15
 			"$alignTop": true
@@ -35,22 +35,23 @@ new FormModel {
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridy": 2
 			} )
-			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalTouchSliderUi" ) {
-				name: "focusSlider"
-				"minimumSize": new java.awt.Dimension( 300, 50 )
-				"preferredSize": new java.awt.Dimension( 300, 50 )
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridy": 3
-			} )
 			add( new FormComponent( "javax.swing.JLabel" ) {
 				name: "labelCameraStatus"
 				"font": new java.awt.Font( "Segoe UI", 1, 14 )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridy": 4
+				"gridy": 3
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )
 			"size": new java.awt.Dimension( 365, 710 )
+		} )
+		add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalTouchSliderUi" ) {
+			name: "focusSlider"
+			"minimumSize": new java.awt.Dimension( 300, 50 )
+			"preferredSize": new java.awt.Dimension( 300, 50 )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 420, 580 )
+			"size": new java.awt.Dimension( 364, 51 )
 		} )
 	}
 }

@@ -7,9 +7,10 @@ public class TestSwitcherControllerSean
 {
     public TestSwitcherControllerSean() throws Exception
     {
-        //final BlackmagicAtemSwitcherUserLayer broadcastSwitcherUserLayer = new BlackmagicAtemSwitcherUserLayer("192.168.86.222");
+        final BlackmagicAtemSwitcherUserLayer broadcastSwitcherUserLayer = new BlackmagicAtemSwitcherUserLayer();
+        broadcastSwitcherUserLayer.initialize("192.168.86.222");
         Thread.sleep(1000);
-        //broadcastSwitcherUserLayer.setProgramVideo(4);
+        broadcastSwitcherUserLayer.setProgramVideo(4);
         //Thread.sleep(1000);
         //broadcastSwitcherUserLayer.setPreviewVideo(7);
     }

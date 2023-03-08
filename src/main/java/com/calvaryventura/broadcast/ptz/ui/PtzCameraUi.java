@@ -41,7 +41,6 @@ public class PtzCameraUi extends JPanel
         this.zoomSlider.setDisplayMessage("ZOOM", "OUT", "IN", Color.GREEN);
         this.focusSlider.setDisplayMessage("FOCUS", "FAR", "NEAR", Color.GREEN);
 
-        this.setPresetPanelBankSaveName(this.getName());
         this.initializeCallbacks();
     }
 
@@ -154,10 +153,11 @@ public class PtzCameraUi extends JPanel
     }
 
     /**
-     * @param name unique name for associating this bank of camera presets
+     * Call this to load presets that were previously saved to disk.
      */
-    private void setPresetPanelBankSaveName(String name)
+    public void loadPresetsSavedToDisk()
     {
+        final String name = this.getName(); // unique name for associating this bank of camera presets
         this.saveFile = new File(System.getProperty("user.home") + "/camera_presets_" + name + ".txt");
         if (!this.saveFile.isFile())
         {
@@ -238,17 +238,17 @@ public class PtzCameraUi extends JPanel
         panelPresetsHolder = new JPanel();
         directionalSwipePanel = new DirectionalTouchUi();
         zoomSlider = new HorizontalTouchSliderUi();
-        focusSlider = new HorizontalTouchSliderUi();
         labelCameraStatus = new JLabel();
+        focusSlider = new HorizontalTouchSliderUi();
 
         //======== this ========
         setBackground(Color.black);
         setName("this");
         setLayout(new GridBagLayout());
         ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0, 0};
+        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0};
         ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 0.1, 0.0, 0.0, 0.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 0.1, 0.0, 0.0, 1.0E-4};
 
         //======== panelPresetsHolder ========
         {
@@ -278,20 +278,17 @@ public class PtzCameraUi extends JPanel
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 15, 0), 0, 0));
 
+        //---- labelCameraStatus ----
+        labelCameraStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        labelCameraStatus.setName("labelCameraStatus");
+        add(labelCameraStatus, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
+            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+            new Insets(0, 0, 0, 0), 0, 0));
+
         //---- focusSlider ----
         focusSlider.setMinimumSize(new Dimension(300, 50));
         focusSlider.setPreferredSize(new Dimension(300, 50));
         focusSlider.setName("focusSlider");
-        add(focusSlider, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 15, 0), 0, 0));
-
-        //---- labelCameraStatus ----
-        labelCameraStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        labelCameraStatus.setName("labelCameraStatus");
-        add(labelCameraStatus, new GridBagConstraints(0, 4, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 0), 0, 0));
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
@@ -299,7 +296,7 @@ public class PtzCameraUi extends JPanel
     private JPanel panelPresetsHolder;
     private DirectionalTouchUi directionalSwipePanel;
     private HorizontalTouchSliderUi zoomSlider;
-    private HorizontalTouchSliderUi focusSlider;
     private JLabel labelCameraStatus;
+    private HorizontalTouchSliderUi focusSlider;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

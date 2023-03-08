@@ -1,16 +1,14 @@
 package com.calvaryventura.broadcast.main;
 
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
-import java.util.Objects;
 import javax.swing.*;
 import javax.swing.border.*;
 
 import com.calvaryventura.broadcast.ptz.commander.PtzCameraCommandSender;
 import com.calvaryventura.broadcast.ptz.ui.IPtzCameraUiCallbacks;
 import com.calvaryventura.broadcast.ptz.ui.PtzCameraUi;
+import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUi;
 import org.apache.log4j.BasicConfigurator;
@@ -23,20 +21,22 @@ import org.slf4j.LoggerFactory;
 public class BroadcastControlMain extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final String UCAT_SETTINGS_JAR_RESOURCE = "/settings/broadcast_settings.txt"; // src/main/resources
-    private final BlackmagicAtemSwitcherUserLayer switcherControl = new BlackmagicAtemSwitcherUserLayer();
-    private final PtzCameraCommandSender wallCameraCommandSender;
-    private final PtzCameraCommandSender overheadCameraCommandSender;
+    private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
+    private final PtzCameraCommandSender leftCameraCommandSender;
+    private final PtzCameraCommandSender rightCameraCommandSender;
+    private final BroadcastSettings settings;
 
     /**
      * Main entry point for application.
      */
     public static void main(String[] args)
     {
-        BasicConfigurator.configure();
+        BasicConfigurator.configure(); // logger
         logger.info("Starting Calvary Ventura Broadcast Control Interface...");
         new BroadcastControlMain();
     }
+
+// TODO need a way for the switcher controller to report it's connection status and also if commands fail... (should black-out all buttons...)
 
     /**
      * Initializes the major UI panels, etc.
@@ -45,66 +45,33 @@ public class BroadcastControlMain extends JFrame
     {
         // UI initialization
         this.initComponents();
-        this.setExtendedState(JFrame.MAXIMIZED_BOTH); // fullscreen
         this.setLocationRelativeTo(null);
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
         this.setVisible(true);
 
-        // load settings from a config file
-        String wallCameraIp = "";
-        String overheadCameraIp = "";
-        String broadcastIp = "";
-        try
-        {
-            final BufferedReader in = new BufferedReader(new InputStreamReader(
-                    Objects.requireNonNull(this.getClass().getResourceAsStream(UCAT_SETTINGS_JAR_RESOURCE))));
-            String line;
-            while ((line = in.readLine()) != null)
-            {
-                final String[] split = line.trim().split("=");
-                switch (split[0].trim())
-                {
-                    case "wallCameraIp":
-                        wallCameraIp = split[1].trim();
-                        break;
-                    case "overheadCameraIp":
-                        overheadCameraIp = split[1].trim();
-                        break;
-                    case "broadcastSwitcherIp":
-                        broadcastIp = split[1].trim();
-                        break;
-                    default:
-                        throw new Exception("Unrecognized config file line: " + line);
-                }
-            }
-            in.close();
-        } catch (Exception e)
-        {
-            System.out.println("Unable to load settings from JAR resource");
-            e.printStackTrace();
-        }
-
         // initialize command senders
-        this.wallCameraCommandSender = new PtzCameraCommandSender(wallCameraIp, this.leftCameraControlPanel.getLabelCameraStatus());
-        this.overheadCameraCommandSender = new PtzCameraCommandSender(overheadCameraIp, this.rightCameraControlPanel.getLabelCameraStatus());
+        this.settings = new BroadcastSettings();
+        this.leftCameraCommandSender = new PtzCameraCommandSender(this.settings.getLeftCameraIp(), this.leftCameraControlPanel.getLabelCameraStatus());
+        this.rightCameraCommandSender = new PtzCameraCommandSender(this.settings.getRightCameraIp(), this.rightCameraControlPanel.getLabelCameraStatus());
 
         this.leftCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
         {
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return wallCameraCommandSender.setPreset(presetIdx);
+                return leftCameraCommandSender.setPreset(presetIdx);
             }
 
             @Override
             public boolean callPreviewPressed(int presetIdx)
             {
-                return wallCameraCommandSender.callPreset(presetIdx) && switcherControl.setPreviewVideo(4) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
+                return leftCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return wallCameraCommandSender.callPreset(presetIdx) && switcherControl.setProgramVideo(4) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
+                return leftCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
@@ -131,19 +98,19 @@ public class BroadcastControlMain extends JFrame
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return overheadCameraCommandSender.setPreset(presetIdx);
+                return rightCameraCommandSender.setPreset(presetIdx);
             }
 
             @Override
             public boolean callPreviewPressed(int presetIdx)
             {
-                return overheadCameraCommandSender.callPreset(presetIdx) && switcherControl.setPreviewVideo(5) && leftCameraControlPanel.clearPreviewAndProgramHighlights(); // TODO use macro
+                return rightCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights(); // TODO use macro
             }
 
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return overheadCameraCommandSender.callPreset(presetIdx) && switcherControl.setProgramVideo(5) && leftCameraControlPanel.clearPreviewAndProgramHighlights();
+                return rightCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
@@ -165,75 +132,30 @@ public class BroadcastControlMain extends JFrame
             }
         });
 
+        // connections for the switcher's UI control panel to actually send commands
+        this.switcherControlPanel.onAutoPressed(e -> this.switcherCommandSender.performAuto());
+        this.switcherControlPanel.onCutPressed(e -> this.switcherCommandSender.performCut());
+        this.switcherControlPanel.onLyricsPressed(this.switcherCommandSender::setKeyerOnAirEnabled);
+        this.switcherControlPanel.onFadeToBlackPressed(e -> this.switcherCommandSender.performFadeToBlack());
+        this.switcherControlPanel.onPreviewSourceChanged(this.switcherCommandSender::setPreviewVideo);
+        this.switcherControlPanel.onProgramSourceChanged(this.switcherCommandSender::setProgramVideo);
 
-        this.switcherControlPanel.setAutoPressed(e -> {
-            try
-            {
-                this.switcherControl.performAuto();
-            } catch (Exception ex)
-            {
-                ex.printStackTrace();
-            }
-        });
+        // connections for the switcher's status to get updated on the UI control panel
+        this.switcherCommandSender.addUpstreamKeyOnAirConsumer(keyOnAir -> this.switcherControlPanel.setLyricsStatus(keyOnAir));
+        this.switcherCommandSender.addFadeToBlackActiveConsumer(ftb -> this.switcherControlPanel.setFadeToBlackStatus(ftb));
+        this.switcherCommandSender.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
+        this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> this.switcherControlPanel.setPreviewSourceStatus(previewIdx));
+        this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> this.switcherControlPanel.setProgramSourceStatus(programIdx));
 
-        this.switcherControlPanel.setCutPressed(e -> {
-            try
-            {
-                this.switcherControl.performCut();
-            } catch (Exception ex)
-            {
-                ex.printStackTrace();
-            }
-        });
+        // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
+        this.switcherControlPanel.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
 
-        this.switcherControlPanel.setLyricsPressed(lyricsOn -> {
-            try
-            {
-                this.switcherControl.setKeyerOnAirEnabled(lyricsOn);
-            } catch (Exception ex)
-            {
-                ex.printStackTrace();
-            }
-        });
-
-        this.switcherControlPanel.setFadeToBlackPressed(e -> {
-            try
-            {
-                this.switcherControl.performFadeToBlack();
-            } catch (Exception ex)
-            {
-                ex.printStackTrace();
-            }
-        });
-
-        this.switcherControlPanel.setPreviewSourceChanged(previewIdx -> {
-            try
-            {
-                this.switcherControl.setPreviewVideo(previewIdx);
-            } catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-        });
-
-        this.switcherControlPanel.setProgramSourceChanged(programIdx -> {
-            try
-            {
-                this.switcherControl.setProgramVideo(programIdx);
-            } catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-        });
-
-        this.switcherControl.addUpstreamKeyOnAirConsumer(keyOnAir -> this.switcherControlPanel.setLyricsStatus(keyOnAir));
-        this.switcherControl.addFadeToBlackActiveConsumer(ftb -> this.switcherControlPanel.setFadeToBlackStatus(ftb));
-        this.switcherControl.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
-        this.switcherControl.addPreviewVideoSourceChangedConsumer(previewIdx -> this.switcherControlPanel.setPreviewSourceStatus(previewIdx));
-        this.switcherControl.addProgramVideoSourceChangedConsumer(programIdx -> this.switcherControlPanel.setProgramSourceStatus(programIdx));
+        // load saved presets for the PTZ camera control panels
+        this.leftCameraControlPanel.loadPresetsSavedToDisk();
+        this.rightCameraControlPanel.loadPresetsSavedToDisk();
 
         // after all the UI initialization is done, finally start the connection to the switcher
-        this.switcherControl.initialize(broadcastIp);
+        this.switcherCommandSender.initialize(settings.getSwitcherIp());
     }
 
     /**
@@ -272,7 +194,7 @@ public class BroadcastControlMain extends JFrame
 
             //---- leftCameraControlPanel ----
             leftCameraControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "Wall Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
                 new EmptyBorder(5, 5, 5, 5)));
             leftCameraControlPanel.setName("leftCameraControlPanel");
@@ -282,7 +204,7 @@ public class BroadcastControlMain extends JFrame
 
             //---- rightCameraControlPanel ----
             rightCameraControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "Overhead Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
                 new EmptyBorder(5, 5, 5, 5)));
             rightCameraControlPanel.setName("rightCameraControlPanel");
@@ -292,7 +214,7 @@ public class BroadcastControlMain extends JFrame
 
             //---- switcherControlPanel ----
             switcherControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "Broadcast Switcher Controls", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
                 new EmptyBorder(5, 5, 5, 5)));
             switcherControlPanel.setName("switcherControlPanel");

@@ -43,8 +43,6 @@ public class BlackmagicAtemSwitcherUserLayer
 
 // TODO
 //  have a callback from the transport layer for switcher connection/init status (or maybe use a CONN command mnemonic?)
-//  use companion and see if there's a way to get the current status after we send a command, or just an ACK?
-//  OK, maybe wrap the transport layer's send command in a try/catch and have another callback to the user layer on connection quality and configuration...
 
     /**
      * Creates the transport layer for low-level messaging.
@@ -255,61 +253,45 @@ public class BlackmagicAtemSwitcherUserLayer
     /**
      * @param videoSourceIdx index of the video source to set as program
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
     public boolean setProgramVideo(int videoSourceIdx)
     {
-        try
-        {
-            final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
-            final byte low = (byte) (videoSourceIdx & 0xFF);
-            this.transportLayer.sendCommand("CPgI", new byte[]{0, 0, high, low});
-            return true;
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-            return false;
-        }
+        final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
+        final byte low = (byte) (videoSourceIdx & 0xFF);
+        return this.transportLayer.sendCommand("CPgI", new byte[]{0, 0, high, low});
     }
 
     /**
      * @param videoSourceIdx index of the video source to set as preview
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
     public boolean setPreviewVideo(int videoSourceIdx)
     {
-        try
-        {
-            final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
-            final byte low = (byte) (videoSourceIdx & 0xFF);
-            this.transportLayer.sendCommand("CPvI", new byte[]{0, 0, high, low});
-            return true;
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-            return false;
-        }
+        final byte high = (byte) ((videoSourceIdx >> 8) & 0xFF);
+        final byte low = (byte) (videoSourceIdx & 0xFF);
+        return this.transportLayer.sendCommand("CPvI", new byte[]{0, 0, high, low});
     }
 
     /**
      * Equivalent to the user pressing the CUT button on the front panel.
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
-    public void performCut() throws Exception
+    public boolean performCut()
     {
-        this.transportLayer.sendCommand("DCut", new byte[4]);
+        return this.transportLayer.sendCommand("DCut", new byte[4]);
     }
 
     /**
      * Equivalent to the user pressing the AUTO button on the front panel.
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
-    public void performAuto() throws Exception
+    public boolean performAuto()
     {
-        this.transportLayer.sendCommand("DAut", new byte[4]);
+        return this.transportLayer.sendCommand("DAut", new byte[4]);
     }
 
     /**
@@ -331,13 +313,13 @@ public class BlackmagicAtemSwitcherUserLayer
     /**
      * @param position sets the transition (T-slider), range 0-9999
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
-    public void setTransitionPosition(int position) throws Exception
+    public boolean setTransitionPosition(int position)
     {
         final byte high = (byte) ((position >> 8) & 0xFF);
         final byte low = (byte) (position & 0xFF);
-        this.transportLayer.sendCommand("CTPs", new byte[]{0, 0, high, low});
+        return this.transportLayer.sendCommand("CTPs", new byte[]{0, 0, high, low});
     }
 
     /**
@@ -345,39 +327,39 @@ public class BlackmagicAtemSwitcherUserLayer
      *
      * @param enabled sets the upstream keyer On Air
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
-    public void setKeyerOnAirEnabled(boolean enabled) throws Exception
+    public boolean setKeyerOnAirEnabled(boolean enabled)
     {
-        this.transportLayer.sendCommand("CKOn", new byte[]{0, 0, (byte) (enabled ? 1 : 0), 0});
+        return this.transportLayer.sendCommand("CKOn", new byte[]{0, 0, (byte) (enabled ? 1 : 0), 0});
     }
 
     /**
      * Triggers the fade to black transition.
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
-    public void performFadeToBlack() throws Exception
+    public boolean performFadeToBlack()
     {
-        this.transportLayer.sendCommand("FtbA", new byte[4]);
+        return this.transportLayer.sendCommand("FtbA", new byte[4]);
     }
 
     /**
      * @param input index of the video input, see video source list
      *
-     * @throws Exception device communication error
+     * @return successful command execution
      */
-    public void setAuxSourceInput(int input) throws Exception
+    public boolean setAuxSourceInput(int input)
     {
         final byte high = (byte) ((input >> 8) & 0xFF);
         final byte low = (byte) (input & 0xFF);
-        this.transportLayer.sendCommand("CAuS", new byte[]{1, 0, high, low});
+        return this.transportLayer.sendCommand("CAuS", new byte[]{1, 0, high, low});
     }
 
 
 
 
-
+    // TODO not sure which way this is...
     public int getVideoSrcIndex(int videoSrc)
     {
         switch (videoSrc)
@@ -476,112 +458,6 @@ public class BlackmagicAtemSwitcherUserLayer
                 return 45;
             case 10021:  // ME 2 Prev
                 return 46;
-            default:
-                return 0;
-        }
-    }
-
-    /*
-     * Translating a index to a video source
-     */
-    public int getVideoIndexSrc(int index)
-    {
-        switch (index)
-        {
-            case 0:  // Black
-                return 0;
-            case 1:  // Input 1
-                return 1;
-            case 2:  // Input 2
-                return 2;
-            case 3:  // Input 3
-                return 3;
-            case 4:  // Input 4
-                return 4;
-            case 5:  // Input 5
-                return 5;
-            case 6:  // Input 6
-                return 6;
-            case 7:  // Input 7
-                return 7;
-            case 8:  // Input 8
-                return 8;
-            case 9:  // Input 9
-                return 9;
-            case 10:  // Input 10
-                return 10;
-            case 11:  // Input 11
-                return 11;
-            case 12:  // Input 12
-                return 12;
-            case 13:  // Input 13
-                return 13;
-            case 14:  // Input 14
-                return 14;
-            case 15:  // Input 15
-                return 15;
-            case 16:  // Input 16
-                return 16;
-            case 17:  // Input 17
-                return 17;
-            case 18:  // Input 18
-                return 18;
-            case 19:  // Input 19
-                return 19;
-            case 20:  // Input 20
-                return 20;
-            case 21:  // Color Bars
-                return 1000;
-            case 22:  // Color 1
-                return 2001;
-            case 23:  // Color 2
-                return 2002;
-            case 24:  // Media Player 1
-                return 3010;
-            case 25:  // Media Player 1 Key
-                return 3011;
-            case 26:  // Media Player 2
-                return 3020;
-            case 27:  // Media Player 2 Key
-                return 3021;
-            case 28:  // Key 1 Mask
-                return 4010;
-            case 29:  // Key 2 Mask
-                return 4020;
-            case 30:  // Key 3 Mask
-                return 4030;
-            case 31:  // Key 4 Mask
-                return 4040;
-            case 32:  // DSK 1 Mask
-                return 5010;
-            case 33:  // DSK 2 Mask
-                return 5020;
-            case 34:  // Super Source
-                return 6000;
-            case 35:  // Clean Feed 1
-                return 7001;
-            case 36:  // Clean Feed 2
-                return 7002;
-            case 37:  // Auxilary 1
-                return 8001;
-            case 38:  // Auxilary 2
-                return 8002;
-            case 39:  // Auxilary 3
-                return 8003;
-            case 40:  // Auxilary 4
-                return 8004;
-            case 41:  // Auxilary 5
-                return 8005;
-            case 42:  // Auxilary 6
-                return 8006;
-            case 43:  // ME 1 Prog
-                return 10010;
-            case 44:  // ME 1 Prev
-                return 10011;
-            case 45:  // ME 2 Prog
-                return 10020;
-            case 46:  // ME 2 Prev
-                return 10021;
             default:
                 return 0;
         }
