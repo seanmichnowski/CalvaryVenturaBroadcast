@@ -25,11 +25,11 @@ new FormModel {
 				auxiliary() {
 					"JavaCodeGenerator.variableLocal": true
 				}
-				add( new FormComponent( "com.calvaryventura.broadcast.ptz.ui.PtzCameraUi" ) {
+				add( new FormComponent( "com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi" ) {
 					name: "leftCameraControlPanel"
 					"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "LEFT Camera", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), &EmptyBorder0 new javax.swing.border.EmptyBorder( 5, 5, 5, 5 ) )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
-				add( new FormComponent( "com.calvaryventura.broadcast.ptz.ui.PtzCameraUi" ) {
+				add( new FormComponent( "com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi" ) {
 					name: "rightCameraControlPanel"
 					"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "RIGHT Camera", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 5, 5, 5, 5 ) )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {

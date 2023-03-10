@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.ptz.ui;
+package com.calvaryventura.broadcast.ptzcamera.ui;
 
 import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
 import com.calvaryventura.broadcast.uiwidgets.HorizontalTouchSliderUi;
@@ -50,6 +50,15 @@ public class PtzCameraUi extends JPanel
     public void setCallback(IPtzCameraUiCallbacks callback)
     {
         this.callback = callback;
+    }
+
+    /**
+     * @param connected indication if we are connected to the camera's VISCA control port
+     */
+    public void setCameraConnectionStatus(boolean connected)
+    {
+        this.labelConnectionStatus.setText("Connection status: " + (connected ? "connected" : "not connected"));
+        this.labelConnectionStatus.setForeground(connected ? Color.CYAN : Color.RED);
     }
 
     /**
@@ -224,11 +233,6 @@ public class PtzCameraUi extends JPanel
         });
     }
 
-    public JLabel getLabelCameraStatus()
-    {
-        return this.labelCameraStatus;
-    }
-
     /**
      * JFormDesigner Auto-Generated Code.
      */
@@ -236,9 +240,9 @@ public class PtzCameraUi extends JPanel
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
         panelPresetsHolder = new JPanel();
+        labelConnectionStatus = new JLabel();
         directionalSwipePanel = new DirectionalTouchUi();
         zoomSlider = new HorizontalTouchSliderUi();
-        labelCameraStatus = new JLabel();
         focusSlider = new HorizontalTouchSliderUi();
 
         //======== this ========
@@ -246,9 +250,9 @@ public class PtzCameraUi extends JPanel
         setName("this");
         setLayout(new GridBagLayout());
         ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0};
+        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0, 0};
         ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 0.1, 0.0, 0.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 0.1, 0.0, 1.0E-4};
 
         //======== panelPresetsHolder ========
         {
@@ -256,6 +260,14 @@ public class PtzCameraUi extends JPanel
             panelPresetsHolder.setBorder(null);
             panelPresetsHolder.setName("panelPresetsHolder");
             panelPresetsHolder.setLayout(new BoxLayout(panelPresetsHolder, BoxLayout.Y_AXIS));
+
+            //---- labelConnectionStatus ----
+            labelConnectionStatus.setText("Connection status: not connected");
+            labelConnectionStatus.setFont(new Font("Ubuntu", Font.PLAIN, 12));
+            labelConnectionStatus.setForeground(Color.red);
+            labelConnectionStatus.setHorizontalTextPosition(SwingConstants.CENTER);
+            labelConnectionStatus.setName("labelConnectionStatus");
+            panelPresetsHolder.add(labelConnectionStatus);
         }
         add(panelPresetsHolder, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -276,13 +288,6 @@ public class PtzCameraUi extends JPanel
         zoomSlider.setName("zoomSlider");
         add(zoomSlider, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 15, 0), 0, 0));
-
-        //---- labelCameraStatus ----
-        labelCameraStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        labelCameraStatus.setName("labelCameraStatus");
-        add(labelCameraStatus, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 0), 0, 0));
 
         //---- focusSlider ----
@@ -294,9 +299,9 @@ public class PtzCameraUi extends JPanel
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
     private JPanel panelPresetsHolder;
+    private JLabel labelConnectionStatus;
     private DirectionalTouchUi directionalSwipePanel;
     private HorizontalTouchSliderUi zoomSlider;
-    private JLabel labelCameraStatus;
     private HorizontalTouchSliderUi focusSlider;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

@@ -5,7 +5,7 @@ new FormModel {
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 			"$columnSpecs": "0:1.0"
-			"$rowSpecs": "0:1.0, 0:0.1, 0, 0"
+			"$rowSpecs": "0:1.0, 0:0.1, 0"
 			"$hGap": 7
 			"$vGap": 15
 			"$alignTop": true
@@ -19,6 +19,13 @@ new FormModel {
 				name: "panelPresetsHolder"
 				"opaque": false
 				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+				add( new FormComponent( "javax.swing.JLabel" ) {
+					name: "labelConnectionStatus"
+					"text": "Connection status: not connected"
+					"font": new java.awt.Font( "Ubuntu", 0, 12 )
+					"foreground": sfield java.awt.Color red
+					"horizontalTextPosition": 0
+				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi" ) {
 				name: "directionalSwipePanel"
@@ -34,12 +41,6 @@ new FormModel {
 				"preferredSize": new java.awt.Dimension( 300, 50 )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridy": 2
-			} )
-			add( new FormComponent( "javax.swing.JLabel" ) {
-				name: "labelCameraStatus"
-				"font": new java.awt.Font( "Segoe UI", 1, 14 )
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridy": 3
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )

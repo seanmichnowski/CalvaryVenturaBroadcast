@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.ptz.ui;
+package com.calvaryventura.broadcast.ptzcamera.ui;
 
 /**
  * Simple enum which defines the various states

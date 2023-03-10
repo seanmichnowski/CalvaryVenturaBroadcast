@@ -5,9 +5,9 @@ import java.lang.invoke.MethodHandles;
 import javax.swing.*;
 import javax.swing.border.*;
 
-import com.calvaryventura.broadcast.ptz.commander.PtzCameraCommandSender;
-import com.calvaryventura.broadcast.ptz.ui.IPtzCameraUiCallbacks;
-import com.calvaryventura.broadcast.ptz.ui.PtzCameraUi;
+import com.calvaryventura.broadcast.ptzcamera.control.PtzCameraController;
+import com.calvaryventura.broadcast.ptzcamera.ui.IPtzCameraUiCallbacks;
+import com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi;
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUi;
@@ -16,14 +16,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Main UI and entry point.
+ * Main UI and entry point. Major connections are made in this class.
+ * The switcher UI is kept separate from the switcher controller, and
+ * same with the PTZ cameras. So all these are joined together in this
+ * class. This is where most of the user logic lies.
  */
 public class BroadcastControlMain extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
-    private final PtzCameraCommandSender leftCameraCommandSender;
-    private final PtzCameraCommandSender rightCameraCommandSender;
+    private final PtzCameraController leftCameraController;
+    private final PtzCameraController rightCameraController;
     private final BroadcastSettings settings;
 
     /**
@@ -37,6 +40,7 @@ public class BroadcastControlMain extends JFrame
     }
 
 // TODO need a way for the switcher controller to report it's connection status and also if commands fail... (should black-out all buttons...)
+// TODO maybe each time you press something in the camera UI it should remove all color, and only show color on a returned 'TRUE'
 
     /**
      * Initializes the major UI panels, etc.
@@ -51,45 +55,47 @@ public class BroadcastControlMain extends JFrame
 
         // initialize command senders
         this.settings = new BroadcastSettings();
-        this.leftCameraCommandSender = new PtzCameraCommandSender(this.settings.getLeftCameraIp(), this.leftCameraControlPanel.getLabelCameraStatus());
-        this.rightCameraCommandSender = new PtzCameraCommandSender(this.settings.getRightCameraIp(), this.rightCameraControlPanel.getLabelCameraStatus());
+        this.leftCameraController = new PtzCameraController("LEFT", this.settings.getLeftCameraIp(), 5678);
+        this.rightCameraController = new PtzCameraController("RIGHT", this.settings.getRightCameraIp(), 5678);
+        this.leftCameraController.onCameraConnectionStatus(connected -> this.leftCameraControlPanel.setCameraConnectionStatus(connected));
+        this.rightCameraController.onCameraConnectionStatus(connected -> this.rightCameraControlPanel.setCameraConnectionStatus(connected));
 
         this.leftCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
         {
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return leftCameraCommandSender.setPreset(presetIdx);
+                return leftCameraController.setPreset(presetIdx);
             }
 
             @Override
             public boolean callPreviewPressed(int presetIdx)
             {
-                return leftCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
+                return leftCameraController.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return leftCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
+                return leftCameraController.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
             public boolean panTilt(double pan, double tilt)
             {
-                return false;
+                return leftCameraController.panAndTilt(pan, tilt);
             }
 
             @Override
             public boolean focus(double focus)
             {
-                return false;
+                return leftCameraController.changeFocus(focus);
             }
 
             @Override
             public boolean zoom(double zoom)
             {
-                return false;
+                return leftCameraController.changeZoom(zoom);
             }
         });
 
@@ -98,37 +104,37 @@ public class BroadcastControlMain extends JFrame
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return rightCameraCommandSender.setPreset(presetIdx);
+                return rightCameraController.setPreset(presetIdx);
             }
 
             @Override
             public boolean callPreviewPressed(int presetIdx)
             {
-                return rightCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights(); // TODO use macro
+                return rightCameraController.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights(); // TODO use macro
             }
 
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return rightCameraCommandSender.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights();
+                return rightCameraController.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights();
             }
 
             @Override
             public boolean panTilt(double pan, double tilt)
             {
-                return false;
+                return rightCameraController.panAndTilt(pan, tilt);
             }
 
             @Override
             public boolean focus(double focus)
             {
-                return false;
+                return rightCameraController.changeFocus(focus);
             }
 
             @Override
             public boolean zoom(double zoom)
             {
-                return false;
+                return rightCameraController.changeZoom(zoom);
             }
         });
 

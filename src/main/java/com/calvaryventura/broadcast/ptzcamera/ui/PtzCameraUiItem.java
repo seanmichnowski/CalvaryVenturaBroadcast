@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.ptz.ui;
+package com.calvaryventura.broadcast.ptzcamera.ui;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;

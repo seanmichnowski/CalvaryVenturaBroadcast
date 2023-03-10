@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.ptz.ui;
+package com.calvaryventura.broadcast.ptzcamera.ui;
 
 public enum PtzCameraUiItemState
 {
