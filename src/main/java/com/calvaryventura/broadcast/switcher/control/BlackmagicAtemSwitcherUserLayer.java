@@ -105,6 +105,8 @@ public class BlackmagicAtemSwitcherUserLayer
                 this.fadeToBlackOn = data[1] != 0;
                 this.fadeToBlackInProgress = data[2] != 0;
                 logger.info("Fade to black on: {}, in progress: {}", this.fadeToBlackOn, this.fadeToBlackInProgress);
+                this.fadeToBlackActiveConsumer.forEach(c -> c.accept(this.fadeToBlackOn));
+                this.fadeToBlackInTransitionConsumer.forEach(c -> c.accept(this.fadeToBlackInProgress));
                 break;
 
             // transition position
@@ -112,6 +114,8 @@ public class BlackmagicAtemSwitcherUserLayer
                 this.transitionInProgress = data[1] != 0;
                 this.transitionPosition = BlackmagicAtemSwitcherPacketUtils.word(data[4], data[5]); // 0-9999
                 logger.info("Transition in progress: {}, position: {}", this.transitionInProgress, this.transitionPosition);
+                this.transitionPositionConsumer.forEach(c -> c.accept(this.transitionPosition));
+                this.transitionInProgressConsumer.forEach(c -> c.accept(this.transitionInProgress));
                 break;
 
             // tally lights (bit0=PROGRAM, bit1=PREVIEW, repeated for every tally light)

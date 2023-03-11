@@ -77,7 +77,7 @@ public class BroadcastControlMain extends JFrame
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return leftCameraController.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
+                return switcherCommandSender.performAuto();
             }
 
             @Override
@@ -116,7 +116,7 @@ public class BroadcastControlMain extends JFrame
             @Override
             public boolean callProgramPressed(int presetIdx)
             {
-                return rightCameraController.callPreset(presetIdx) && switcherCommandSender.setProgramVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights();
+                return switcherCommandSender.performAuto();
             }
 
             @Override
@@ -148,7 +148,7 @@ public class BroadcastControlMain extends JFrame
 
         // connections for the switcher's status to get updated on the UI control panel
         this.switcherCommandSender.addUpstreamKeyOnAirConsumer(keyOnAir -> this.switcherControlPanel.setLyricsStatus(keyOnAir));
-        this.switcherCommandSender.addFadeToBlackActiveConsumer(ftb -> this.switcherControlPanel.setFadeToBlackStatus(ftb));
+        this.switcherCommandSender.addFadeToBlackActiveConsumer(ftb -> this.switcherControlPanel.setFadeToBlackOnStatus(ftb));
         this.switcherCommandSender.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> this.switcherControlPanel.setPreviewSourceStatus(previewIdx));
         this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> this.switcherControlPanel.setProgramSourceStatus(programIdx));

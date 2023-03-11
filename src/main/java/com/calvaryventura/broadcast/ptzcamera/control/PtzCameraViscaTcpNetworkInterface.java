@@ -113,6 +113,7 @@ public class PtzCameraViscaTcpNetworkInterface
                     final int nRead = this.inFromServer.read(rxBuf);
                     final byte[] rx = new byte[nRead];
                     System.arraycopy(rxBuf, 0, rx, 0, nRead);
+                    logger.info("Received {} bytes from PTZ camera '{}'. Message: {}", nRead, this.displayName, DatatypeConverter.printHexBinary(rx));
                     this.rxProcessingQueue.put(rx);
                 }
             } catch (SocketTimeoutException ignored)

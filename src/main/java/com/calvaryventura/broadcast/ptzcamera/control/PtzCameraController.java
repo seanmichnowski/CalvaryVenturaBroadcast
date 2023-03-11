@@ -8,8 +8,8 @@ import java.util.function.Consumer;
  */
 public class PtzCameraController
 {
-    private static final int PAN_MAX_SPEED   = 17;
-    private static final int TILT_MAX_SPEED  = 17;
+    private static final int PAN_MAX_SPEED   = 10; // can be up to 17
+    private static final int TILT_MAX_SPEED  = 10; // can be up to 17
     private static final int ZOOM_MAX_SPEED  = 7;
     private static final int FOCUS_MAX_SPEED = 7;
     private final PtzCameraViscaTcpNetworkInterface viscaTcpNetworkInterface;

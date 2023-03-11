@@ -17,6 +17,10 @@ import java.util.function.Consumer;
  */
 public class BroadcastSwitcherUi extends JPanel
 {
+    // local states
+    private boolean fadeToBlackOnStatus;
+    private boolean lyricsOnStatus;
+
     // these are fired when the user presses UI buttons to change the video switcher
     private Consumer<Integer> previewSourceChanged;
     private Consumer<Integer> programSourceChanged;
@@ -34,8 +38,14 @@ public class BroadcastSwitcherUi extends JPanel
     public BroadcastSwitcherUi()
     {
         this.initComponents();
-        this.buttonToggleLyrics.addActionListener(e -> this.lyricsPressed.accept(this.buttonToggleLyrics.isSelected()));
-        this.buttonFadeToBlack.addActionListener(e -> this.fadeToBlackPressed.accept(true));
+        this.buttonToggleLyrics.addActionListener(e -> {
+            this.lyricsOnStatus = !this.lyricsOnStatus;
+            this.lyricsPressed.accept(this.lyricsOnStatus);
+        });
+        this.buttonFadeToBlack.addActionListener(e -> {
+            this.fadeToBlackOnStatus = !this.fadeToBlackOnStatus;
+            this.fadeToBlackPressed.accept(!this.fadeToBlackOnStatus);
+        });
         this.buttonCut.addActionListener(e -> this.cutPressed.accept(true));
         this.buttonFade.addActionListener(e -> this.autoPressed.accept(true));
     }
@@ -107,9 +117,9 @@ public class BroadcastSwitcherUi extends JPanel
     /**
      * @param active indication the fade to black is active
      */
-    public void setFadeToBlackStatus(boolean active)
+    public void setFadeToBlackOnStatus(boolean active)
     {
-        this.buttonFadeToBlack.setBackground(active ? Color.RED : Color.BLACK);
+     // TODO   this.buttonFadeToBlack.setBackground(active ? Color.RED : Color.BLACK);
     }
 
     /**
@@ -210,7 +220,7 @@ public class BroadcastSwitcherUi extends JPanel
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
         JPanel panel1 = new JPanel();
-        buttonToggleLyrics = new JToggleButton();
+        buttonToggleLyrics = new JButton();
         buttonFadeToBlack = new JButton();
         buttonCut = new JButton();
         buttonFade = new JButton();
@@ -237,7 +247,6 @@ public class BroadcastSwitcherUi extends JPanel
 
             //---- buttonToggleLyrics ----
             buttonToggleLyrics.setText("<html>Toggle<br>Lyrics</html>");
-            buttonToggleLyrics.setOpaque(false);
             buttonToggleLyrics.setForeground(Color.cyan);
             buttonToggleLyrics.setBackground(Color.black);
             buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -246,7 +255,6 @@ public class BroadcastSwitcherUi extends JPanel
 
             //---- buttonFadeToBlack ----
             buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
-            buttonFadeToBlack.setOpaque(false);
             buttonFadeToBlack.setForeground(Color.cyan);
             buttonFadeToBlack.setBackground(Color.black);
             buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -264,7 +272,6 @@ public class BroadcastSwitcherUi extends JPanel
 
             //---- buttonFade ----
             buttonFade.setText("FADE");
-            buttonFade.setOpaque(false);
             buttonFade.setForeground(Color.cyan);
             buttonFade.setBackground(Color.black);
             buttonFade.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -333,7 +340,7 @@ public class BroadcastSwitcherUi extends JPanel
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    private JToggleButton buttonToggleLyrics;
+    private JButton buttonToggleLyrics;
     private JButton buttonFadeToBlack;
     private JButton buttonCut;
     private JButton buttonFade;

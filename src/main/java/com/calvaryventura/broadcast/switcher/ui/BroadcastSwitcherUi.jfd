@@ -23,10 +23,9 @@ new FormModel {
 				auxiliary() {
 					"JavaCodeGenerator.variableLocal": true
 				}
-				add( new FormComponent( "javax.swing.JToggleButton" ) {
+				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonToggleLyrics"
 					"text": "<html>Toggle<br>Lyrics</html>"
-					"opaque": false
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color black
 					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 16 )
@@ -34,10 +33,10 @@ new FormModel {
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonFadeToBlack"
 					"text": "<html>Fade to<br>Black</html>"
-					"opaque": false
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color black
 					"font": #Font0
+					"opaque": false
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonCut"
@@ -50,7 +49,6 @@ new FormModel {
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonFade"
 					"text": "FADE"
-					"opaque": false
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color black
 					"font": #Font0
