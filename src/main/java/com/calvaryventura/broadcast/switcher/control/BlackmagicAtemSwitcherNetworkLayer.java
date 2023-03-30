@@ -112,6 +112,6 @@ public class BlackmagicAtemSwitcherNetworkLayer
     {
         logger.info("Sending packet: {}", packet);
         this.transmitPacket.setData(packet.getFullPacketBytes());
-        this.txRxSocket.send(this.transmitPacket);
+        this.txRxSocket.send(this.transmitPacket); // TODO https://www.baeldung.com/java-nio-datagramchannel start here
     }
 }
