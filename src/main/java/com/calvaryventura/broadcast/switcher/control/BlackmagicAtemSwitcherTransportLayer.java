@@ -25,6 +25,7 @@ public class BlackmagicAtemSwitcherTransportLayer
     private int sessionID; // given by ATEM switcher upon connect
     private boolean initializationComplete;
     private final BiConsumer<String, byte[]> dataFieldAvailableConsumer;
+    private long lastReceivedPacketTimeMs;
 
     /**
      * Sets up the UDP connection to the switcher, and sets up the background
@@ -44,7 +45,12 @@ public class BlackmagicAtemSwitcherTransportLayer
         Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() ->{
             try
             {
-                this.doInitializationSequence();
+                if (!this.initializationComplete || System.currentTimeMillis() - this.lastReceivedPacketTimeMs > 5000)
+                {
+                    this.initializationComplete = false;
+                    this.doInitializationSequence();
+                    this.initializationComplete = true;
+                }
             } catch (Throwable e)
             {
                 logger.error("Cannot initialize Blackmagic switcher", e);
@@ -63,6 +69,7 @@ public class BlackmagicAtemSwitcherTransportLayer
     {
         try
         {
+            this.lastReceivedPacketTimeMs = System.currentTimeMillis();
             packet.getPayloadFields().forEach(this.dataFieldAvailableConsumer);
 
             // TODO
@@ -71,25 +78,23 @@ public class BlackmagicAtemSwitcherTransportLayer
             {
                 this.sendAcknowledgementPacket(packet);
             }
-
         } catch (Exception e)
         {
             logger.info("Cannot process packet payload", e);
+            this.initializationComplete = false; // triggers reinitialize
         }
     }
 
     /**
-     * Call this at the beginning. Sets the {@link #initializationComplete} flag.
+     * Call this at the beginning, estalishes a connection with the switcher.
      * Documentation: <a href="https://docs.openswitcher.org/udptransport.html">link</a>.
      *
      * @throws Exception on device connection issue or initialization timeout
      */
     private void doInitializationSequence() throws Exception
     {
-        if (this.initializationComplete)
-        {
-            return;
-        }
+        // fire signal indicating switcher is NOT connected
+        this.dataFieldAvailableConsumer.accept("CONN", new byte[]{0});
 
         // create outgoing initialization packet 1
         final int randSessionId = (int) (Math.random() * 1000);
@@ -161,9 +166,12 @@ public class BlackmagicAtemSwitcherTransportLayer
             }
         }
 
+        // reset the local sequence number for the new connection established
         logger.info("Completed BlackMagic switcher initialization!");
-        this.initializationComplete = true;
         this.localSequenceNumber = 0;
+
+        // fire a callback indicating the switcher has connected
+        this.dataFieldAvailableConsumer.accept("CONN", new byte[]{1});
     }
 
     /**
@@ -196,6 +204,7 @@ public class BlackmagicAtemSwitcherTransportLayer
         } catch (Exception e)
         {
             logger.error("Received error when sending command '{}' to the switcher", cmd, e);
+            this.initializationComplete = false; // triggers reinitialize
             return false;
         }
     }

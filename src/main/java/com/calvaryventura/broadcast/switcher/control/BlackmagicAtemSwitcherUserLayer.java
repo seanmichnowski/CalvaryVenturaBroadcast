@@ -73,6 +73,11 @@ public class BlackmagicAtemSwitcherUserLayer
     {
         switch (cmd)
         {
+            // video switcher connection status
+            case "CONN":
+                this.switcherConnectionStatusConsumer.forEach(c -> c.accept(data[0] == 1));
+                break;
+
             // program video selection
             case "PrgI":
                 this.currentVideoProgramIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
@@ -102,11 +107,12 @@ public class BlackmagicAtemSwitcherUserLayer
 
             // fade to black (red blinking light on the panel when it's on)
             case "FtbP":
+            // TODO doesn't work, check incoming values..
                 this.fadeToBlackOn = data[1] != 0;
                 this.fadeToBlackInProgress = data[2] != 0;
                 logger.info("Fade to black on: {}, in progress: {}", this.fadeToBlackOn, this.fadeToBlackInProgress);
-                this.fadeToBlackActiveConsumer.forEach(c -> c.accept(this.fadeToBlackOn));
-                this.fadeToBlackInTransitionConsumer.forEach(c -> c.accept(this.fadeToBlackInProgress));
+                //this.fadeToBlackActiveConsumer.forEach(c -> c.accept(this.fadeToBlackOn));
+                //this.fadeToBlackInTransitionConsumer.forEach(c -> c.accept(this.fadeToBlackInProgress));
                 break;
 
             // transition position
@@ -188,6 +194,14 @@ public class BlackmagicAtemSwitcherUserLayer
     public boolean isFadeToBlackInProgress()
     {
         return fadeToBlackInProgress;
+    }
+
+    /**
+     * @param connectionStatusConsumer fired when the switcher connects or disconnects
+     */
+    public void addConnectionStatusConsumer(Consumer<Boolean> connectionStatusConsumer)
+    {
+        this.switcherConnectionStatusConsumer.add(connectionStatusConsumer);
     }
 
     /**

@@ -1,4 +1,4 @@
-JFDML JFormDesigner: "7.0.5.1.409" Java: "17.0.5" encoding: "UTF-8"
+JFDML JFormDesigner: "8.0.3.0.246" Java: "17.0.6" encoding: "UTF-8"
 
 new FormModel {
 	contentType: "form/swing"
@@ -21,10 +21,12 @@ new FormModel {
 				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
 				add( new FormComponent( "javax.swing.JLabel" ) {
 					name: "labelConnectionStatus"
-					"text": "Connection status: not connected"
-					"font": new java.awt.Font( "Ubuntu", 0, 12 )
+					"text": "Camera not connected :("
 					"foreground": sfield java.awt.Color red
-					"horizontalTextPosition": 0
+					"background": sfield java.awt.Color black
+					"font": new java.awt.Font( "Segoe UI", 1, 14 )
+					"horizontalAlignment": 2
+					"horizontalTextPosition": 2
 				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi" ) {

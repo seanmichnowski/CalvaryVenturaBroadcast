@@ -57,8 +57,8 @@ public class PtzCameraUi extends JPanel
      */
     public void setCameraConnectionStatus(boolean connected)
     {
-        this.labelConnectionStatus.setText("Connection status: " + (connected ? "connected" : "not connected"));
-        this.labelConnectionStatus.setForeground(connected ? Color.CYAN : Color.RED);
+        this.labelConnectionStatus.setText(connected ? "Camera connected :)" : "Camera not connected :(");
+        this.labelConnectionStatus.setForeground(connected ? Color.GREEN : Color.RED);
     }
 
     /**
@@ -262,10 +262,12 @@ public class PtzCameraUi extends JPanel
             panelPresetsHolder.setLayout(new BoxLayout(panelPresetsHolder, BoxLayout.Y_AXIS));
 
             //---- labelConnectionStatus ----
-            labelConnectionStatus.setText("Connection status: not connected");
-            labelConnectionStatus.setFont(new Font("Ubuntu", Font.PLAIN, 12));
+            labelConnectionStatus.setText("Camera not connected :(");
             labelConnectionStatus.setForeground(Color.red);
-            labelConnectionStatus.setHorizontalTextPosition(SwingConstants.CENTER);
+            labelConnectionStatus.setBackground(Color.black);
+            labelConnectionStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
+            labelConnectionStatus.setHorizontalTextPosition(SwingConstants.LEFT);
             labelConnectionStatus.setName("labelConnectionStatus");
             panelPresetsHolder.add(labelConnectionStatus);
         }

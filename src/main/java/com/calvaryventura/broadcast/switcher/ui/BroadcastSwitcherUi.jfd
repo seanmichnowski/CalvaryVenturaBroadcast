@@ -1,11 +1,11 @@
-JFDML JFormDesigner: "7.0.5.1.409" Java: "17.0.5" encoding: "UTF-8"
+JFDML JFormDesigner: "8.0.3.0.246" Java: "17.0.6" encoding: "UTF-8"
 
 new FormModel {
 	contentType: "form/swing"
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 			"$columnSpecs": "0, 0, 0:1.0"
-			"$rowSpecs": "0:0.1"
+			"$rowSpecs": "0:0.1, 0"
 			"$hGap": 5
 			"$alignTop": true
 			"$alignLeft": true
@@ -27,37 +27,35 @@ new FormModel {
 					name: "buttonToggleLyrics"
 					"text": "<html>Toggle<br>Lyrics</html>"
 					"foreground": sfield java.awt.Color cyan
-					"background": sfield java.awt.Color black
-					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 16 )
+					"background": sfield java.awt.Color darkGray
+					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 18 )
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonFadeToBlack"
 					"text": "<html>Fade to<br>Black</html>"
 					"foreground": sfield java.awt.Color cyan
-					"background": sfield java.awt.Color black
+					"background": sfield java.awt.Color darkGray
 					"font": #Font0
-					"opaque": false
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonCut"
 					"text": "CUT"
-					"opaque": false
 					"foreground": sfield java.awt.Color cyan
-					"background": sfield java.awt.Color black
+					"background": sfield java.awt.Color darkGray
 					"font": #Font0
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonFade"
 					"text": "FADE"
 					"foreground": sfield java.awt.Color cyan
-					"background": sfield java.awt.Color black
+					"background": sfield java.awt.Color darkGray
 					"font": #Font0
 				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
 				name: "hSpacer1"
-				"minimumSize": new java.awt.Dimension( 40, 12 )
-				"preferredSize": new java.awt.Dimension( 40, 10 )
+				"minimumSize": new java.awt.Dimension( 30, 12 )
+				"preferredSize": new java.awt.Dimension( 30, 10 )
 				"opaque": false
 				auxiliary() {
 					"JavaCodeGenerator.variableLocal": true
@@ -83,7 +81,7 @@ new FormModel {
 					"text": "<html><u>Preview<br>selection:</u></html>"
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color black
-					"font": #Font0
+					"font": &Font1 new java.awt.Font( "Segoe UI", 1, 16 )
 					"horizontalAlignment": 4
 					auxiliary() {
 						"JavaCodeGenerator.variableLocal": true
@@ -101,7 +99,7 @@ new FormModel {
 					"text": "<html><u>Program<br>selection:</u></html>"
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color black
-					"font": #Font0
+					"font": #Font1
 					"horizontalAlignment": 4
 					auxiliary() {
 						"JavaCodeGenerator.variableLocal": true
@@ -111,6 +109,18 @@ new FormModel {
 				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridx": 2
+				"gridheight": 2
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "labelConnectionStatus"
+				"text": "Switcher not connected :("
+				"foreground": sfield java.awt.Color red
+				"background": sfield java.awt.Color black
+				"font": new java.awt.Font( "Segoe UI", 1, 14 )
+				"horizontalAlignment": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+				"gridy": 1
+				"gridwidth": 2
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )

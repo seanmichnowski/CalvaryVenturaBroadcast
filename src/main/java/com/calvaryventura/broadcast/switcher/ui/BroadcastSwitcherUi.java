@@ -99,11 +99,21 @@ public class BroadcastSwitcherUi extends JPanel
     }
 
     /**
-     * TODO
-     * @param connected
+     * @param connected indication if we have established connection with the switcher
      */
     public void setSwitcherConnectionStatus(boolean connected)
     {
+        this.labelConnectionStatus.setText(connected ? "Switcher connected :)" : "Switcher not connected :(");
+        this.labelConnectionStatus.setForeground(connected ? Color.GREEN : Color.RED);
+
+        // stop showing the color background on switcher buttons if we are not connected
+        if (!connected)
+        {
+            this.videoInputSourceEntries.forEach(videoEntry -> {
+                videoEntry.setPreviewVideoSourceActive(-1);
+                videoEntry.setProgramSourceStatus(-1);
+            });
+        }
     }
 
     /**
@@ -111,7 +121,7 @@ public class BroadcastSwitcherUi extends JPanel
      */
     public void setFadeTransitionInProgressStatus(boolean active)
     {
-        this.buttonFade.setBackground(active ? Color.YELLOW : Color.BLACK);
+        this.buttonFade.setBackground(active ? Color.YELLOW : Color.DARK_GRAY);
     }
 
     /**
@@ -119,7 +129,7 @@ public class BroadcastSwitcherUi extends JPanel
      */
     public void setFadeToBlackOnStatus(boolean active)
     {
-     // TODO   this.buttonFadeToBlack.setBackground(active ? Color.RED : Color.BLACK);
+        this.buttonFadeToBlack.setBackground(active ? Color.RED : Color.DARK_GRAY);
     }
 
     /**
@@ -127,7 +137,7 @@ public class BroadcastSwitcherUi extends JPanel
      */
     public void setLyricsStatus(boolean active)
     {
-        this.buttonToggleLyrics.setBackground(active ? Color.RED : Color.BLACK);
+        this.buttonToggleLyrics.setBackground(active ? Color.RED : Color.DARK_GRAY);
     }
 
     /**
@@ -169,18 +179,18 @@ public class BroadcastSwitcherUi extends JPanel
 
             // create the preview button
             this.previewButton = new JButton(name);
-            this.previewButton.setBackground(Color.BLACK);
-            this.previewButton.setForeground(Color.CYAN);
-            this.previewButton.setFont(new Font("Segoe", Font.BOLD, 16));
-            this.previewButton.setBorder(new CompoundBorder(new EmptyBorder(0,5,5,5), new LineBorder(Color.CYAN)));
+            this.previewButton.setBackground(Color.DARK_GRAY);
+            this.previewButton.setForeground(Color.WHITE);
+            this.previewButton.setFont(new Font("Segoe", Font.BOLD, 18));
+            this.previewButton.setBorder(new CompoundBorder(new EmptyBorder(5,5,5,5), new LineBorder(Color.GREEN)));
             this.previewButton.addActionListener(e -> previewSourceChanged.accept(videoSourceIndex));
 
             // create the program button
             this.programButton = new JButton(name);
-            this.programButton.setBackground(Color.BLACK);
-            this.programButton.setForeground(Color.CYAN);
-            this.programButton.setFont(new Font("Segoe", Font.BOLD, 16));
-            this.programButton.setBorder(new CompoundBorder(new EmptyBorder(5,5,0,5), new LineBorder(Color.CYAN)));
+            this.programButton.setBackground(Color.DARK_GRAY);
+            this.programButton.setForeground(Color.WHITE);
+            this.programButton.setFont(new Font("Segoe", Font.BOLD, 18));
+            this.programButton.setBorder(new CompoundBorder(new EmptyBorder(5,5,5,5), new LineBorder(Color.RED)));
             this.programButton.addActionListener(e -> programSourceChanged.accept(videoSourceIndex));
         }
 
@@ -189,7 +199,8 @@ public class BroadcastSwitcherUi extends JPanel
          */
         private JPanel createPreviewProgramButtonsPanel()
         {
-            final JPanel prevProgPanel = new JPanel(new GridLayout(2, 1));
+            final JPanel prevProgPanel = new JPanel(new GridLayout(2, 1, 0, 10));
+            prevProgPanel.setBorder(new EmptyBorder(0, 5, 0, 5));
             prevProgPanel.setOpaque(false);
             prevProgPanel.add(this.previewButton);
             prevProgPanel.add(this.programButton);
@@ -201,7 +212,7 @@ public class BroadcastSwitcherUi extends JPanel
          */
         private void setPreviewVideoSourceActive(int previewSourceActive)
         {
-            this.previewButton.setBackground(previewSourceActive == this.videoSourceIndex ? Color.GREEN : Color.BLACK);
+            this.previewButton.setBackground(previewSourceActive == this.videoSourceIndex ? Color.GREEN : Color.DARK_GRAY);
         }
 
         /**
@@ -209,7 +220,7 @@ public class BroadcastSwitcherUi extends JPanel
          */
         private void setProgramSourceStatus(int programSourceActive)
         {
-            this.programButton.setBackground(programSourceActive == this.videoSourceIndex ? Color.RED : Color.BLACK);
+            this.programButton.setBackground(programSourceActive == this.videoSourceIndex ? Color.RED : Color.DARK_GRAY);
         }
     }
 
@@ -229,15 +240,16 @@ public class BroadcastSwitcherUi extends JPanel
         JLabel labelPreview = new JLabel();
         panelProgPrevButtonHolder = new JPanel();
         JLabel labelProgram = new JLabel();
+        labelConnectionStatus = new JLabel();
 
         //======== this ========
         setBackground(Color.black);
         setName("this");
         setLayout(new GridBagLayout());
         ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 0, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0};
+        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0};
         ((GridBagLayout)getLayout()).columnWeights = new double[] {0.0, 0.0, 1.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 1.0E-4};
+        ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 0.0, 1.0E-4};
 
         //======== panel1 ========
         {
@@ -248,33 +260,32 @@ public class BroadcastSwitcherUi extends JPanel
             //---- buttonToggleLyrics ----
             buttonToggleLyrics.setText("<html>Toggle<br>Lyrics</html>");
             buttonToggleLyrics.setForeground(Color.cyan);
-            buttonToggleLyrics.setBackground(Color.black);
-            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonToggleLyrics.setBackground(Color.darkGray);
+            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 18));
             buttonToggleLyrics.setName("buttonToggleLyrics");
             panel1.add(buttonToggleLyrics);
 
             //---- buttonFadeToBlack ----
             buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
             buttonFadeToBlack.setForeground(Color.cyan);
-            buttonFadeToBlack.setBackground(Color.black);
-            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonFadeToBlack.setBackground(Color.darkGray);
+            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 18));
             buttonFadeToBlack.setName("buttonFadeToBlack");
             panel1.add(buttonFadeToBlack);
 
             //---- buttonCut ----
             buttonCut.setText("CUT");
-            buttonCut.setOpaque(false);
             buttonCut.setForeground(Color.cyan);
-            buttonCut.setBackground(Color.black);
-            buttonCut.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonCut.setBackground(Color.darkGray);
+            buttonCut.setFont(new Font("Segoe UI", Font.BOLD, 18));
             buttonCut.setName("buttonCut");
             panel1.add(buttonCut);
 
             //---- buttonFade ----
             buttonFade.setText("FADE");
             buttonFade.setForeground(Color.cyan);
-            buttonFade.setBackground(Color.black);
-            buttonFade.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonFade.setBackground(Color.darkGray);
+            buttonFade.setFont(new Font("Segoe UI", Font.BOLD, 18));
             buttonFade.setName("buttonFade");
             panel1.add(buttonFade);
         }
@@ -283,8 +294,8 @@ public class BroadcastSwitcherUi extends JPanel
             new Insets(0, 0, 0, 5), 0, 0));
 
         //---- hSpacer1 ----
-        hSpacer1.setMinimumSize(new Dimension(40, 12));
-        hSpacer1.setPreferredSize(new Dimension(40, 10));
+        hSpacer1.setMinimumSize(new Dimension(30, 12));
+        hSpacer1.setPreferredSize(new Dimension(30, 10));
         hSpacer1.setOpaque(false);
         hSpacer1.setName("hSpacer1");
         add(hSpacer1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
@@ -333,9 +344,20 @@ public class BroadcastSwitcherUi extends JPanel
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 10), 0, 0));
         }
-        add(panel2, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+        add(panel2, new GridBagConstraints(2, 0, 1, 2, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 0), 0, 0));
+
+        //---- labelConnectionStatus ----
+        labelConnectionStatus.setText("Switcher not connected :(");
+        labelConnectionStatus.setForeground(Color.red);
+        labelConnectionStatus.setBackground(Color.black);
+        labelConnectionStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
+        labelConnectionStatus.setName("labelConnectionStatus");
+        add(labelConnectionStatus, new GridBagConstraints(0, 1, 2, 1, 0.0, 0.0,
+            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+            new Insets(0, 0, 0, 5), 0, 0));
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
@@ -345,5 +367,6 @@ public class BroadcastSwitcherUi extends JPanel
     private JButton buttonCut;
     private JButton buttonFade;
     private JPanel panelProgPrevButtonHolder;
+    private JLabel labelConnectionStatus;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

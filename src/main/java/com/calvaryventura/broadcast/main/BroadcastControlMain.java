@@ -39,8 +39,8 @@ public class BroadcastControlMain extends JFrame
         new BroadcastControlMain();
     }
 
-// TODO need a way for the switcher controller to report it's connection status and also if commands fail... (should black-out all buttons...)
 // TODO maybe each time you press something in the camera UI it should remove all color, and only show color on a returned 'TRUE'
+//  TODO kind of like this... need to make the camera and switcher button colors more synched.....
 
     /**
      * Initializes the major UI panels, etc.
@@ -152,6 +152,7 @@ public class BroadcastControlMain extends JFrame
         this.switcherCommandSender.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> this.switcherControlPanel.setPreviewSourceStatus(previewIdx));
         this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> this.switcherControlPanel.setProgramSourceStatus(programIdx));
+        this.switcherCommandSender.addConnectionStatusConsumer(connected -> this.switcherControlPanel.setSwitcherConnectionStatus(connected));
 
         // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
         this.switcherControlPanel.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
