@@ -125,11 +125,13 @@ public class BroadcastSwitcherUi extends JPanel
     }
 
     /**
-     * @param active indication the fade to black is active
+     * @param active indication the fade to black is active or inactive
+     * @param inTransition indicates we are fading, show the button in yellow
      */
-    public void setFadeToBlackOnStatus(boolean active)
+    public void setFadeToBlackOnStatus(boolean active, boolean inTransition)
     {
-        this.buttonFadeToBlack.setBackground(active ? Color.RED : Color.DARK_GRAY);
+        this.buttonFadeToBlack.setBackground(inTransition ? Color.YELLOW : active ? Color.RED : Color.DARK_GRAY);
+        this.fadeToBlackOnStatus = active;
     }
 
     /**
@@ -235,20 +237,21 @@ public class BroadcastSwitcherUi extends JPanel
         buttonFadeToBlack = new JButton();
         buttonCut = new JButton();
         buttonFade = new JButton();
-        JPanel hSpacer1 = new JPanel(null);
         JPanel panel2 = new JPanel();
         JLabel labelPreview = new JLabel();
+        labelPreview.setUI(new VerticalLabelUI(false));
         panelProgPrevButtonHolder = new JPanel();
         JLabel labelProgram = new JLabel();
+        labelProgram.setUI(new VerticalLabelUI(false));
         labelConnectionStatus = new JLabel();
 
         //======== this ========
         setBackground(Color.black);
         setName("this");
         setLayout(new GridBagLayout());
-        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 0, 0};
+        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 20, 0, 0};
         ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0};
-        ((GridBagLayout)getLayout()).columnWeights = new double[] {0.0, 0.0, 1.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).columnWeights = new double[] {0.1, 0.0, 1.0, 1.0E-4};
         ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 0.0, 1.0E-4};
 
         //======== panel1 ========
@@ -261,7 +264,7 @@ public class BroadcastSwitcherUi extends JPanel
             buttonToggleLyrics.setText("<html>Toggle<br>Lyrics</html>");
             buttonToggleLyrics.setForeground(Color.cyan);
             buttonToggleLyrics.setBackground(Color.darkGray);
-            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 20));
             buttonToggleLyrics.setName("buttonToggleLyrics");
             panel1.add(buttonToggleLyrics);
 
@@ -269,7 +272,8 @@ public class BroadcastSwitcherUi extends JPanel
             buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
             buttonFadeToBlack.setForeground(Color.cyan);
             buttonFadeToBlack.setBackground(Color.darkGray);
-            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            buttonFadeToBlack.setPreferredSize(new Dimension(120, 50));
             buttonFadeToBlack.setName("buttonFadeToBlack");
             panel1.add(buttonFadeToBlack);
 
@@ -277,7 +281,7 @@ public class BroadcastSwitcherUi extends JPanel
             buttonCut.setText("CUT");
             buttonCut.setForeground(Color.cyan);
             buttonCut.setBackground(Color.darkGray);
-            buttonCut.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            buttonCut.setFont(new Font("Segoe UI", Font.BOLD, 24));
             buttonCut.setName("buttonCut");
             panel1.add(buttonCut);
 
@@ -285,20 +289,11 @@ public class BroadcastSwitcherUi extends JPanel
             buttonFade.setText("FADE");
             buttonFade.setForeground(Color.cyan);
             buttonFade.setBackground(Color.darkGray);
-            buttonFade.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            buttonFade.setFont(new Font("Segoe UI", Font.BOLD, 24));
             buttonFade.setName("buttonFade");
             panel1.add(buttonFade);
         }
         add(panel1, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 5), 0, 0));
-
-        //---- hSpacer1 ----
-        hSpacer1.setMinimumSize(new Dimension(30, 12));
-        hSpacer1.setPreferredSize(new Dimension(30, 10));
-        hSpacer1.setOpaque(false);
-        hSpacer1.setName("hSpacer1");
-        add(hSpacer1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 5), 0, 0));
 
@@ -313,15 +308,15 @@ public class BroadcastSwitcherUi extends JPanel
             ((GridBagLayout)panel2.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
 
             //---- labelPreview ----
-            labelPreview.setText("<html><u>Preview<br>selection:</u></html>");
-            labelPreview.setForeground(Color.cyan);
+            labelPreview.setText("Preview");
+            labelPreview.setForeground(Color.green);
             labelPreview.setBackground(Color.black);
             labelPreview.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            labelPreview.setHorizontalAlignment(SwingConstants.RIGHT);
+            labelPreview.setHorizontalAlignment(SwingConstants.CENTER);
             labelPreview.setName("labelPreview");
             panel2.add(labelPreview, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 10), 0, 0));
+                new Insets(0, 0, 10, 0), 0, 0));
 
             //======== panelProgPrevButtonHolder ========
             {
@@ -334,15 +329,15 @@ public class BroadcastSwitcherUi extends JPanel
                 new Insets(0, 0, 0, 0), 0, 0));
 
             //---- labelProgram ----
-            labelProgram.setText("<html><u>Program<br>selection:</u></html>");
-            labelProgram.setForeground(Color.cyan);
+            labelProgram.setText("Program");
+            labelProgram.setForeground(Color.red);
             labelProgram.setBackground(Color.black);
             labelProgram.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            labelProgram.setHorizontalAlignment(SwingConstants.RIGHT);
+            labelProgram.setHorizontalAlignment(SwingConstants.CENTER);
             labelProgram.setName("labelProgram");
             panel2.add(labelProgram, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 0, 10), 0, 0));
+                new Insets(0, 0, 0, 0), 0, 0));
         }
         add(panel2, new GridBagConstraints(2, 0, 1, 2, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,

@@ -1,7 +1,7 @@
 package com.calvaryventura.broadcast.ptzcamera.ui;
 
 import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
-import com.calvaryventura.broadcast.uiwidgets.HorizontalTouchSliderUi;
+import com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,11 +21,15 @@ import java.util.stream.IntStream;
  */
 public class PtzCameraUi extends JPanel
 {
-    private static final int NUM_PRESETS = 8;
+    private static final int NUM_PRESETS = 6;
     private final List<PtzCameraUiItem> presets = new ArrayList<>();
+    private int lastClickedPresetIdx = -1;
     private IPtzCameraUiCallbacks callback;
-    private int cameraPresetItemIdx = 0;
     private File saveFile;
+
+    // complicated layout descriptor for adding  PTZ camera preset items into their layout panel, but it does make them stack nice and allows vertical space between entries to grow and fill
+    private static final GridBagConstraints GRID_BAG_CONSTRAINTS = new GridBagConstraints(0, GridBagConstraints.RELATIVE, 1, NUM_PRESETS,
+            1.0, 1.0, GridBagConstraints.NORTH, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0);
 
     /**
      * MAIN - wait on connect before doing anything else
@@ -36,12 +40,38 @@ public class PtzCameraUi extends JPanel
 
         // add the desired number of preset boxes to the panel
         IntStream.range(0, NUM_PRESETS).boxed().forEach(i ->
-                this.addCameraPresetItem(new PtzCameraUiItem(String.valueOf(i), this::presetNameChangedSaveToDisk)));
+        {
+            // create the new UI item for this preset
+            final PtzCameraUiItem item = new PtzCameraUiItem(i, this::presetNameChangedSaveToDisk);
 
-        this.zoomSlider.setDisplayMessage("ZOOM", "OUT", "IN", Color.GREEN);
-        this.focusSlider.setDisplayMessage("FOCUS", "FAR", "NEAR", Color.GREEN);
+            // set preset action updates the status label text for a little while
+            item.onPresetSetClicked(() -> {
+                final boolean success = this.callback.setPressed(item.getPresetIdx());
+                this.lastClickedPresetIdx = success ? item.getPresetIdx() : -1;
+                final String originalLabelStatus = this.labelConnectionStatus.getText();
+                this.labelConnectionStatus.setText("<html><font color='white'>Set preset: <u>" + item.getPresetName()
+                        + "</u> " + (success ? "OK" : "FAILED") + "</font></html>");
+                final Timer tOriginal = new Timer(0, action -> this.labelConnectionStatus.setText(originalLabelStatus));
+                tOriginal.setInitialDelay(2000);
+                tOriginal.setRepeats(false);
+                tOriginal.start();
+            });
 
-        this.initializeCallbacks();
+            // call/GoTo preset action (returns a boolean indicating successful camera movement)
+            item.onPresetCalledClicked(() -> {
+                final boolean success = this.callback.callPressed(item.getPresetIdx());
+                this.lastClickedPresetIdx = success ? item.getPresetIdx() : -1;
+                return success;
+            });
+
+            // add to UI parent panel
+            this.presets.add(item);
+            this.panelPresetsHolder.add(item, GRID_BAG_CONSTRAINTS);
+        });
+
+        // initialize callbacks from the UI elements
+        this.directionalSwipePanel.addXYOutputConsumer((pan, tilt) -> this.callback.panTilt(pan, tilt));
+        this.zoomSlider.addValueChangedConsumer(zoom -> this.callback.zoom(zoom));
     }
 
     /**
@@ -62,103 +92,16 @@ public class PtzCameraUi extends JPanel
     }
 
     /**
-     * TODO
+     * Sets the display background color or any preset that was selected.
+     * @param backgroundColor color to display
      */
-    public void setPreviewShowingOnLastItemIfCameraNotMoved()
+    public void setActivePresetBackgroundColor(Color backgroundColor)
     {
-    }
-
-    /**
-     * TODO
-     */
-    public void setProgramShowingOnLastItemIfCameraNotMoved()
-    {
-    }
-
-    /**
-     * TODO
-     */
-    public boolean clearPreviewAndProgramHighlights()
-    {
-        this.disablePresetShowing();
-        return true;
-    }
-
-    /**
-     * Must call this during initialization.
-     */
-    private void initializeCallbacks()
-    {
-        this.directionalSwipePanel.addXYOutputConsumer((pan, tilt) -> this.callback.panTilt(pan, tilt));
-        this.zoomSlider.addValueChangedConsumer(zoom -> this.callback.zoom(zoom));
-        this.focusSlider.addValueChangedConsumer(focus -> this.callback.focus(focus));
-
-        // when either the directional or the zoom is moved, we NO LONGER
-        // have any preset, so clear the presets that might be showing in RED
-        this.directionalSwipePanel.addXYOutputConsumer((x, y) -> {
-            if (x != 0 || y != 0)
-            {
-                this.disablePresetShowing();
-            }
-        });
-        this.zoomSlider.addValueChangedConsumer(z -> {
-            if (z != 0)
-            {
-                this.disablePresetShowing();
-            }
-        });
-    }
-
-    /**
-     * NOTE: deleting of items is done through this panel,
-     * i.e. there's no 'deleteItem' in this class
-     *
-     * @param item the new preset to add
-     */
-    private void addCameraPresetItem(PtzCameraUiItem item)
-    {
-        item.setPresetIdx(cameraPresetItemIdx++);
-        item.onPresetSetClicked(() -> {
-            final boolean success = this.callback.setPressed(item.getPresetIdx());
-            if (success)
-            {
-                item.setContentPanelColor(Color.BLACK);
-                final Timer tGreen = new Timer(0, action -> item.setContentPanelColor(Color.GREEN.darker()));
-                final Timer tOriginal = new Timer(0, action -> {
-                    this.disablePresetShowing();
-                    item.setContentPanelColor(Color.RED);
-                });
-                tGreen.setInitialDelay(500);
-                tGreen.setRepeats(false);
-                tGreen.start();
-                tOriginal.setInitialDelay(1500);
-                tOriginal.setRepeats(false);
-                tOriginal.start();
-            } else
-            {
-                item.setContentPanelColor(Color.BLACK);
-            }
-        });
-
-        item.onPresetCalledClicked(() -> {
-            final PtzCameraUiItemState originalState = item.getState();
-            this.disablePresetShowing(); // reset all items including their states
-            if (originalState == PtzCameraUiItemState.NOT_SELECTED)
-            {
-                final boolean success = this.callback.callPreviewPressed(item.getPresetIdx());
-                item.setContentPanelColor(success ? Color.GREEN.darker() : Color.BLACK);
-                item.setState(PtzCameraUiItemState.PREVIEW_SHOWING);
-            } else
-            {
-                final boolean success = this.callback.callProgramPressed(item.getPresetIdx());
-                item.setContentPanelColor(success ? Color.RED.darker() : Color.BLACK);
-                item.setState(PtzCameraUiItemState.PROGRAM_SHOWING);
-            }
-        });
-
-        this.presets.add(item);
-        this.panelPresetsHolder.add(item);
-        this.revalidate();
+        this.presets.forEach(p -> p.setContentPanelColor(null));
+        if (this.lastClickedPresetIdx >= 0 && this.lastClickedPresetIdx < this.presets.size())
+        {
+            this.presets.get(this.lastClickedPresetIdx).setContentPanelColor(backgroundColor);
+        }
     }
 
     /**
@@ -175,7 +118,7 @@ public class PtzCameraUi extends JPanel
                 this.saveFile.createNewFile();
             } catch (IOException e)
             {
-                System.out.printf("Cannot create preset save file '%s'\n", this.saveFile.getPath());
+                e.printStackTrace();
                 this.saveFile = null;
             }
         }
@@ -185,7 +128,7 @@ public class PtzCameraUi extends JPanel
         {
             try
             {
-                final List<String> collect = Files.lines(this.saveFile.toPath()).collect(Collectors.toList());
+                final List<String> collect = Files.readAllLines(this.saveFile.toPath());
                 if (!collect.isEmpty())
                 {
                     final String[] presetNames = collect.get(0).split(",");
@@ -198,13 +141,12 @@ public class PtzCameraUi extends JPanel
             } catch (IOException e)
             {
                 e.printStackTrace();
-                System.out.printf("Cannot read save file\n");
             }
         }
     }
 
     /**
-     * TODO
+     * Fired when we change the name of a preset, updates the file on disk.
      */
     private void presetNameChangedSaveToDisk()
     {
@@ -222,88 +164,75 @@ public class PtzCameraUi extends JPanel
     }
 
     /**
-     * If there is any preset which is RED/active/showing, turn off the red color,
-     * which is then indicating the camera was moved and the preset is no longer active.
-     */
-    private void disablePresetShowing()
-    {
-        this.presets.forEach(p -> {
-            p.setContentPanelColor(Color.BLACK);
-            p.setState(PtzCameraUiItemState.NOT_SELECTED);
-        });
-    }
-
-    /**
      * JFormDesigner Auto-Generated Code.
      */
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        panelPresetsHolder = new JPanel();
         labelConnectionStatus = new JLabel();
+        panelPresetsHolder = new JPanel();
         directionalSwipePanel = new DirectionalTouchUi();
-        zoomSlider = new HorizontalTouchSliderUi();
-        focusSlider = new HorizontalTouchSliderUi();
+        zoomSlider = new HorizontalZoomTouchUi();
 
         //======== this ========
         setBackground(Color.black);
         setName("this");
         setLayout(new GridBagLayout());
         ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0, 0};
+        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0};
         ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 0.1, 0.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).rowWeights = new double[] {0.0, 1.0, 0.1, 0.0, 1.0E-4};
+
+        //---- labelConnectionStatus ----
+        labelConnectionStatus.setText("Camera not connected :(");
+        labelConnectionStatus.setForeground(Color.red);
+        labelConnectionStatus.setBackground(Color.black);
+        labelConnectionStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
+        labelConnectionStatus.setHorizontalTextPosition(SwingConstants.LEFT);
+        labelConnectionStatus.setName("labelConnectionStatus");
+        add(labelConnectionStatus, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+            new Insets(0, 0, 10, 0), 0, 0));
 
         //======== panelPresetsHolder ========
         {
             panelPresetsHolder.setOpaque(false);
             panelPresetsHolder.setBorder(null);
             panelPresetsHolder.setName("panelPresetsHolder");
-            panelPresetsHolder.setLayout(new BoxLayout(panelPresetsHolder, BoxLayout.Y_AXIS));
-
-            //---- labelConnectionStatus ----
-            labelConnectionStatus.setText("Camera not connected :(");
-            labelConnectionStatus.setForeground(Color.red);
-            labelConnectionStatus.setBackground(Color.black);
-            labelConnectionStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
-            labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
-            labelConnectionStatus.setHorizontalTextPosition(SwingConstants.LEFT);
-            labelConnectionStatus.setName("labelConnectionStatus");
-            panelPresetsHolder.add(labelConnectionStatus);
+            panelPresetsHolder.setLayout(new GridBagLayout());
+            ((GridBagLayout)panelPresetsHolder.getLayout()).columnWidths = new int[] {0, 0};
+            ((GridBagLayout)panelPresetsHolder.getLayout()).rowHeights = new int[] {0, 0};
+            ((GridBagLayout)panelPresetsHolder.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+            ((GridBagLayout)panelPresetsHolder.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
         }
-        add(panelPresetsHolder, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+        add(panelPresetsHolder, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 15, 0), 0, 0));
+            new Insets(0, 0, 10, 0), 0, 0));
 
         //---- directionalSwipePanel ----
         directionalSwipePanel.setMinimumSize(new Dimension(300, 200));
         directionalSwipePanel.setPreferredSize(new Dimension(300, 200));
         directionalSwipePanel.setDisplayMessage("PAN & TILT");
         directionalSwipePanel.setName("directionalSwipePanel");
-        add(directionalSwipePanel, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+        add(directionalSwipePanel, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 15, 0), 0, 0));
+            new Insets(0, 0, 10, 0), 0, 0));
 
         //---- zoomSlider ----
         zoomSlider.setMinimumSize(new Dimension(300, 50));
         zoomSlider.setPreferredSize(new Dimension(300, 50));
         zoomSlider.setName("zoomSlider");
-        add(zoomSlider, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,
+        add(zoomSlider, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 0), 0, 0));
-
-        //---- focusSlider ----
-        focusSlider.setMinimumSize(new Dimension(300, 50));
-        focusSlider.setPreferredSize(new Dimension(300, 50));
-        focusSlider.setName("focusSlider");
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    private JPanel panelPresetsHolder;
     private JLabel labelConnectionStatus;
+    private JPanel panelPresetsHolder;
     private DirectionalTouchUi directionalSwipePanel;
-    private HorizontalTouchSliderUi zoomSlider;
-    private HorizontalTouchSliderUi focusSlider;
+    private HorizontalZoomTouchUi zoomSlider;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

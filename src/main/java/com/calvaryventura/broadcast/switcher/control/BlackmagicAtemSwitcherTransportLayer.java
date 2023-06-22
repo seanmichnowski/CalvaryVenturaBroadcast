@@ -53,7 +53,7 @@ public class BlackmagicAtemSwitcherTransportLayer
                 }
             } catch (Throwable e)
             {
-                logger.error("Cannot initialize Blackmagic switcher", e);
+                logger.error("Cannot initialize Blackmagic switcher. {}", e.getMessage());
                 this.initializationComplete = false;
             }
         }, 0, 2, TimeUnit.SECONDS);

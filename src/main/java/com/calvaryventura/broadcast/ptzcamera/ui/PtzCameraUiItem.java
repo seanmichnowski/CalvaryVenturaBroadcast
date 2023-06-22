@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.Serializable;
+import java.util.concurrent.Callable;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.DocumentEvent;
@@ -15,18 +16,18 @@ import javax.swing.event.DocumentListener;
  */
 public class PtzCameraUiItem extends JPanel implements Serializable
 {
-    private int presetIdx;
-    private PtzCameraUiItemState state;
+    private final int presetIdx;
 
     /**
-     * @param name default name of the preset
+     * @param presetIdx numerical unique value for this preset (always stays constant regardless of name change)
+     * @param presetNameChangedAction fired when we change the name of this preset
      */
-    public PtzCameraUiItem(String name, Runnable presetNameChangedAction)
+    public PtzCameraUiItem(int presetIdx, Runnable presetNameChangedAction)
     {
+        this.presetIdx = presetIdx;
         this.initComponents();
-        this.textFieldName.setText(name.trim());
+        this.textFieldName.setText(String.valueOf(presetIdx));
         this.highlightTextField(this.textFieldName);
-        this.state = PtzCameraUiItemState.NOT_SELECTED;
 
         // set up listener for the preset name changed action
         this.textFieldName.getDocument().addDocumentListener(new DocumentListener()
@@ -72,9 +73,20 @@ public class PtzCameraUiItem extends JPanel implements Serializable
     /**
      * @param presetCalledAction fired when the user clicks the "GoTo" button
      */
-    public void onPresetCalledClicked(Runnable presetCalledAction)
+    public void onPresetCalledClicked(Callable<Boolean> presetCalledAction)
     {
-        this.buttonGoTo.addActionListener(e -> presetCalledAction.run());
+        this.buttonGoTo.addActionListener(e -> {
+            try
+            {
+                this.buttonGoTo.setEnabled(false); // grey out
+                presetCalledAction.call();         // attempt to move the camera
+                this.buttonGoTo.setEnabled(true);  // reenable
+            } catch (Exception ex)
+            {
+                this.buttonGoTo.setEnabled(true);
+                System.out.printf("Cannot move camera! Error=%s\n", ex.getMessage());
+            }
+        });
     }
 
     /**
@@ -110,37 +122,35 @@ public class PtzCameraUiItem extends JPanel implements Serializable
         this.textFieldName.setText(name);
     }
 
+    /**
+     * @param color color to set as background for this preset item (or NULL for default/no color)
+     */
     public void setContentPanelColor(Color color)
     {
-        this.panelContent.setBackground(color);
-        this.buttonGoTo.setBackground(color);
-        this.buttonSet.setBackground(color);
-        this.textFieldName.setBackground(color);
+        // background panel color
+        this.panelContent.setBackground(color == null ? Color.BLACK : color);
+
+        // set the border color around this preset UI item (default when color is NULL is a purple color, see JFD form)
+        final Color borderColor = color == null ? new Color(0xcc00cc) : color.darker();
+        this.panelContent.setBorder(new CompoundBorder(
+            new LineBorder(borderColor, 2),
+            new CompoundBorder(
+                    new SoftBevelBorder(SoftBevelBorder.LOWERED),
+                    new EmptyBorder(2, 2, 2, 2))));
     }
 
-    public void setPresetIdx(int presetIdx)
-    {
-        this.presetIdx = presetIdx;
-    }
-
+    /**
+     * @return ID of this preset used to send to the camera, stays the same regardless of name change
+     */
     public int getPresetIdx()
     {
         return presetIdx;
     }
 
-    public PtzCameraUiItemState getState()
-    {
-        return state;
-    }
-
-    public void setState(PtzCameraUiItemState state)
-    {
-        this.state = state;
-    }
-
     /**
      * JFormDesigner Auto-Generated Code.
      */
+    @SuppressWarnings("all")
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
@@ -151,8 +161,8 @@ public class PtzCameraUiItem extends JPanel implements Serializable
 
         //======== this ========
         setBorder(new EmptyBorder(6, 0, 6, 0));
-        setPreferredSize(new Dimension(269, 50));
-        setMinimumSize(new Dimension(249, 50));
+        setPreferredSize(new Dimension(269, 70));
+        setMinimumSize(new Dimension(249, 70));
         setOpaque(false);
         setName("this");
         setLayout(new BorderLayout());
@@ -160,13 +170,13 @@ public class PtzCameraUiItem extends JPanel implements Serializable
         //======== panelContent ========
         {
             panelContent.setBorder(new CompoundBorder(
-                new LineBorder(new Color(204, 0, 204), 2),
+                new LineBorder(new Color(0xcc00cc), 2),
                 new CompoundBorder(
                     new SoftBevelBorder(SoftBevelBorder.LOWERED),
                     new EmptyBorder(2, 2, 2, 2))));
             panelContent.setBackground(Color.black);
-            panelContent.setMinimumSize(new Dimension(249, 50));
-            panelContent.setPreferredSize(new Dimension(269, 50));
+            panelContent.setMinimumSize(new Dimension(249, 70));
+            panelContent.setPreferredSize(new Dimension(269, 70));
             panelContent.setName("panelContent");
             panelContent.setLayout(new GridBagLayout());
             ((GridBagLayout)panelContent.getLayout()).columnWidths = new int[] {0, 0, 0, 0};
@@ -182,10 +192,9 @@ public class PtzCameraUiItem extends JPanel implements Serializable
             buttonGoTo.setMaximumSize(new Dimension(50, 46));
             buttonGoTo.setMinimumSize(new Dimension(50, 46));
             buttonGoTo.setPreferredSize(new Dimension(50, 46));
-            buttonGoTo.setForeground(new Color(0, 165, 44));
-            buttonGoTo.setBackground(Color.black);
+            buttonGoTo.setForeground(new Color(0x00a52c));
+            buttonGoTo.setBackground(Color.darkGray);
             buttonGoTo.setIconTextGap(2);
-            buttonGoTo.setOpaque(false);
             buttonGoTo.setName("buttonGoTo");
             panelContent.add(buttonGoTo, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -195,7 +204,7 @@ public class PtzCameraUiItem extends JPanel implements Serializable
             textFieldName.setText("Name");
             textFieldName.setHorizontalAlignment(SwingConstants.CENTER);
             textFieldName.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            textFieldName.setForeground(new Color(0, 204, 204));
+            textFieldName.setForeground(new Color(0x00cccc));
             textFieldName.setBackground(Color.black);
             textFieldName.setSelectionColor(Color.yellow);
             textFieldName.setOpaque(false);
@@ -209,13 +218,12 @@ public class PtzCameraUiItem extends JPanel implements Serializable
             buttonSet.setText("SET");
             buttonSet.setFont(new Font("Segoe UI", Font.BOLD, 16));
             buttonSet.setHorizontalTextPosition(SwingConstants.LEADING);
-            buttonSet.setForeground(new Color(204, 102, 0));
+            buttonSet.setForeground(new Color(0xcc6600));
             buttonSet.setPreferredSize(new Dimension(100, 30));
             buttonSet.setMinimumSize(new Dimension(100, 30));
             buttonSet.setMaximumSize(new Dimension(100, 30));
-            buttonSet.setBackground(Color.black);
+            buttonSet.setBackground(Color.darkGray);
             buttonSet.setIconTextGap(2);
-            buttonSet.setOpaque(false);
             buttonSet.setName("buttonSet");
             panelContent.add(buttonSet, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,

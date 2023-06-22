@@ -11,7 +11,6 @@ public class PtzCameraController
     private static final int PAN_MAX_SPEED   = 10; // can be up to 17
     private static final int TILT_MAX_SPEED  = 10; // can be up to 17
     private static final int ZOOM_MAX_SPEED  = 7;
-    private static final int FOCUS_MAX_SPEED = 7;
     private final PtzCameraViscaTcpNetworkInterface viscaTcpNetworkInterface;
 
     /**
@@ -96,22 +95,10 @@ public class PtzCameraController
     }
 
     /**
-     * @param focusSpeed speed of focusing (+) is in, (-) is out, 0 is stop
-     * @return successful command execution
-     */
-    public boolean changeFocus(double focusSpeed)
-    {
-        final byte speed = (byte) ((byte) (Math.abs(focusSpeed) * FOCUS_MAX_SPEED) & 0x0F);
-        final byte focus = (byte) (focusSpeed > 0 ? (0x20 | speed) : focusSpeed < 0 ? (0x30 | speed) : 0x00);
-        final byte[] focusCommand = new byte[]{(byte) 0x81, 0x01, 0x04, 0x08, focus, (byte) 0xFF};
-        return this.viscaTcpNetworkInterface.send(focusCommand);
-    }
-
-    /**
      * @param presetIndex index of the preset to move the camera to
      * @return successful command execution
      */
-    public boolean setPreset(int presetIndex)
+    public boolean savePreset(int presetIndex)
     {
         presetIndex &= 0x0F; // we can only ever have up to 16 presets, and the first four bits must be 0's
         final byte[] setPresetCommand = new byte[]{(byte) 0x81, 0x01, 0x04, 0x3F, 0x01, (byte) presetIndex, (byte) 0xFF};
@@ -122,7 +109,7 @@ public class PtzCameraController
      * @param presetIndex index of the preset to move the camera to
      * @return successful command execution
      */
-    public boolean callPreset(int presetIndex)
+    public boolean moveToPreset(int presetIndex)
     {
         presetIndex &= 0x0F; // we can only ever have up to 16 presets, and the first four bits must be 0's
         final byte[] setPresetCommand = new byte[]{(byte) 0x81, 0x01, 0x04, 0x3F, 0x02, (byte) presetIndex, (byte) 0xFF};

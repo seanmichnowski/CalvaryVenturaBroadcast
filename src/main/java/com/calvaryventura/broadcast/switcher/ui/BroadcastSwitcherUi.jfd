@@ -4,7 +4,7 @@ new FormModel {
 	contentType: "form/swing"
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
-			"$columnSpecs": "0, 0, 0:1.0"
+			"$columnSpecs": "0:0.1, 15, 0:1.0"
 			"$rowSpecs": "0:0.1, 0"
 			"$hGap": 5
 			"$alignTop": true
@@ -28,7 +28,7 @@ new FormModel {
 					"text": "<html>Toggle<br>Lyrics</html>"
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color darkGray
-					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 18 )
+					"font": &Font0 new java.awt.Font( "Segoe UI", 1, 20 )
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonFadeToBlack"
@@ -36,37 +36,26 @@ new FormModel {
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color darkGray
 					"font": #Font0
+					"preferredSize": new java.awt.Dimension( 120, 50 )
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonCut"
 					"text": "CUT"
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color darkGray
-					"font": #Font0
+					"font": &Font1 new java.awt.Font( "Segoe UI", 1, 24 )
 				} )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonFade"
 					"text": "FADE"
 					"foreground": sfield java.awt.Color cyan
 					"background": sfield java.awt.Color darkGray
-					"font": #Font0
+					"font": #Font1
 				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
-			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
-				name: "hSpacer1"
-				"minimumSize": new java.awt.Dimension( 30, 12 )
-				"preferredSize": new java.awt.Dimension( 30, 10 )
-				"opaque": false
-				auxiliary() {
-					"JavaCodeGenerator.variableLocal": true
-				}
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridx": 1
-			} )
 			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 				"$columnSpecs": "0, 0:1.0"
 				"$rowSpecs": "0:1.0, 0:1.0"
-				"$hGap": 10
 				"$vGap": 10
 				"$alignTop": true
 				"$alignLeft": true
@@ -78,13 +67,14 @@ new FormModel {
 				}
 				add( new FormComponent( "javax.swing.JLabel" ) {
 					name: "labelPreview"
-					"text": "<html><u>Preview<br>selection:</u></html>"
-					"foreground": sfield java.awt.Color cyan
+					"text": "Preview"
+					"foreground": sfield java.awt.Color green
 					"background": sfield java.awt.Color black
-					"font": &Font1 new java.awt.Font( "Segoe UI", 1, 16 )
-					"horizontalAlignment": 4
+					"font": &Font2 new java.awt.Font( "Segoe UI", 1, 16 )
+					"horizontalAlignment": 0
 					auxiliary() {
 						"JavaCodeGenerator.variableLocal": true
+						"JavaCodeGenerator.postCreateCode": "labelPreview.setUI(new VerticalLabelUI(false));"
 					}
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class javax.swing.BoxLayout ) ) {
@@ -96,13 +86,14 @@ new FormModel {
 				} )
 				add( new FormComponent( "javax.swing.JLabel" ) {
 					name: "labelProgram"
-					"text": "<html><u>Program<br>selection:</u></html>"
-					"foreground": sfield java.awt.Color cyan
+					"text": "Program"
+					"foreground": sfield java.awt.Color red
 					"background": sfield java.awt.Color black
-					"font": #Font1
-					"horizontalAlignment": 4
+					"font": #Font2
+					"horizontalAlignment": 0
 					auxiliary() {
 						"JavaCodeGenerator.variableLocal": true
+						"JavaCodeGenerator.postCreateCode": "labelProgram.setUI(new VerticalLabelUI(false));"
 					}
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridy": 1

@@ -5,56 +5,53 @@ new FormModel {
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 			"$columnSpecs": "0:1.0"
-			"$rowSpecs": "0:1.0, 0:0.1, 0"
+			"$rowSpecs": "0, 0:1.0, 0:0.1, 0"
 			"$hGap": 7
-			"$vGap": 15
+			"$vGap": 10
 			"$alignTop": true
 			"$alignLeft": true
 		} ) {
 			name: "this"
 			"background": sfield java.awt.Color black
-			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class javax.swing.BoxLayout ) {
-				"axis": 1
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "labelConnectionStatus"
+				"text": "Camera not connected :("
+				"foreground": sfield java.awt.Color red
+				"background": sfield java.awt.Color black
+				"font": new java.awt.Font( "Segoe UI", 1, 14 )
+				"horizontalAlignment": 2
+				"horizontalTextPosition": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+				"$columnSpecs": "0:1.0"
+				"$rowSpecs": "0:1.0"
+				"$alignTop": true
+				"$alignLeft": true
 			} ) {
 				name: "panelPresetsHolder"
 				"opaque": false
 				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
-				add( new FormComponent( "javax.swing.JLabel" ) {
-					name: "labelConnectionStatus"
-					"text": "Camera not connected :("
-					"foreground": sfield java.awt.Color red
-					"background": sfield java.awt.Color black
-					"font": new java.awt.Font( "Segoe UI", 1, 14 )
-					"horizontalAlignment": 2
-					"horizontalTextPosition": 2
-				} )
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+				"gridy": 1
+			} )
 			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi" ) {
 				name: "directionalSwipePanel"
 				"minimumSize": new java.awt.Dimension( 300, 200 )
 				"preferredSize": new java.awt.Dimension( 300, 200 )
 				"displayMessage": "PAN & TILT"
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridy": 1
+				"gridy": 2
 			} )
-			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalTouchSliderUi" ) {
+			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi" ) {
 				name: "zoomSlider"
 				"minimumSize": new java.awt.Dimension( 300, 50 )
 				"preferredSize": new java.awt.Dimension( 300, 50 )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-				"gridy": 2
+				"gridy": 3
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )
 			"size": new java.awt.Dimension( 365, 710 )
-		} )
-		add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalTouchSliderUi" ) {
-			name: "focusSlider"
-			"minimumSize": new java.awt.Dimension( 300, 50 )
-			"preferredSize": new java.awt.Dimension( 300, 50 )
-		}, new FormLayoutConstraints( null ) {
-			"location": new java.awt.Point( 420, 580 )
-			"size": new java.awt.Dimension( 364, 51 )
 		} )
 	}
 }

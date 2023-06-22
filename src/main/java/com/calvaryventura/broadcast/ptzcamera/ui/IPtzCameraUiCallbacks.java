@@ -18,14 +18,7 @@ public interface IPtzCameraUiCallbacks
      * @param presetIdx
      * @return
      */
-    boolean callPreviewPressed(int presetIdx);
-
-    /**
-     * Program...
-     * @param presetIdx
-     * @return
-     */
-    boolean callProgramPressed(int presetIdx);
+    boolean callPressed(int presetIdx);
 
     /**
      * Moving...
@@ -34,13 +27,6 @@ public interface IPtzCameraUiCallbacks
      * @return
      */
     boolean panTilt(double pan, double tilt);
-
-    /**
-     * Focus...
-     * @param focus
-     * @return
-     */
-    boolean focus(double focus);
 
     /**
      * Zoom...

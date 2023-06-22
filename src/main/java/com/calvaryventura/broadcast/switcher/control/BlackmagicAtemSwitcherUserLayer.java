@@ -7,6 +7,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -36,13 +37,9 @@ public class BlackmagicAtemSwitcherUserLayer
     private final List<Consumer<Integer>> previewVideoSourceChangedConsumer = new ArrayList<>();
     private final List<Consumer<Integer>> auxVideoSourceChangedConsumer = new ArrayList<>();
     private final List<Consumer<Boolean>> upstreamKeyOnAirConsumer = new ArrayList<>();
-    private final List<Consumer<Boolean>> fadeToBlackActiveConsumer = new ArrayList<>();
-    private final List<Consumer<Boolean>> fadeToBlackInTransitionConsumer = new ArrayList<>();
+    private final List<BiConsumer<Boolean, Boolean>> fadeToBlackActiveAndTransitionConsumer = new ArrayList<>();
     private final List<Consumer<Boolean>> transitionInProgressConsumer = new ArrayList<>();
     private final List<Consumer<Integer>> transitionPositionConsumer = new ArrayList<>();
-
-// TODO
-//  have a callback from the transport layer for switcher connection/init status (or maybe use a CONN command mnemonic?)
 
     /**
      * Creates the transport layer for low-level messaging.
@@ -95,6 +92,7 @@ public class BlackmagicAtemSwitcherUserLayer
             // aux video output index (byte 1 is the aux output, but we only have one)
             case "AuxS":
                 this.currentVideoAuxIdx = BlackmagicAtemSwitcherPacketUtils.word(data[2], data[3]);
+                this.auxVideoSourceChangedConsumer.forEach(c -> c.accept(this.currentVideoAuxIdx));
                 logger.info("Aux video output: {}", this.currentVideoAuxIdx);
                 break;
 
@@ -106,13 +104,10 @@ public class BlackmagicAtemSwitcherUserLayer
                 break;
 
             // fade to black (red blinking light on the panel when it's on)
-            case "FtbP":
-            // TODO doesn't work, check incoming values..
+            case "FtbS":
                 this.fadeToBlackOn = data[1] != 0;
                 this.fadeToBlackInProgress = data[2] != 0;
-                logger.info("Fade to black on: {}, in progress: {}", this.fadeToBlackOn, this.fadeToBlackInProgress);
-                //this.fadeToBlackActiveConsumer.forEach(c -> c.accept(this.fadeToBlackOn));
-                //this.fadeToBlackInTransitionConsumer.forEach(c -> c.accept(this.fadeToBlackInProgress));
+                this.fadeToBlackActiveAndTransitionConsumer.forEach(c -> c.accept(this.fadeToBlackOn, this.fadeToBlackInProgress));
                 break;
 
             // transition position
@@ -165,38 +160,6 @@ public class BlackmagicAtemSwitcherUserLayer
     }
 
     /**
-     * @return index of the current aux video
-     */
-    public int getCurrentVideoAuxIdx()
-    {
-        return this.currentVideoAuxIdx;
-    }
-
-    /**
-     * @return upstream key is On Air
-     */
-    public boolean isUpstreamKeyOnAir()
-    {
-        return this.upstreamKeyOnAir;
-    }
-
-    /**
-     * @return fade to black is active (blinking red front panel light)
-     */
-    public boolean isFadeToBlackOn()
-    {
-        return this.fadeToBlackOn;
-    }
-
-    /**
-     * @return fade to black is in progress
-     */
-    public boolean isFadeToBlackInProgress()
-    {
-        return fadeToBlackInProgress;
-    }
-
-    /**
      * @param connectionStatusConsumer fired when the switcher connects or disconnects
      */
     public void addConnectionStatusConsumer(Consumer<Boolean> connectionStatusConsumer)
@@ -237,19 +200,11 @@ public class BlackmagicAtemSwitcherUserLayer
     }
 
     /**
-     * @param fadeToBlackActiveConsumer fired when the fade to black status changes
+     * @param fadeToBlackConsumer fired when the fade to black status changes
      */
-    public void addFadeToBlackActiveConsumer(Consumer<Boolean> fadeToBlackActiveConsumer)
+    public void addFadeToBlackActiveAndTransitionConsumer(BiConsumer<Boolean, Boolean> fadeToBlackConsumer)
     {
-        this.fadeToBlackActiveConsumer.add(fadeToBlackActiveConsumer);
-    }
-
-    /**
-     * @param fadeToBlackInTransitionConsumer fired when the fade to black is in transition
-     */
-    public void addFadeToBlackInTransitionConsumer(Consumer<Boolean> fadeToBlackInTransitionConsumer)
-    {
-        this.fadeToBlackInTransitionConsumer.add(fadeToBlackInTransitionConsumer);
+        this.fadeToBlackActiveAndTransitionConsumer.add(fadeToBlackConsumer);
     }
 
     /**
@@ -313,22 +268,6 @@ public class BlackmagicAtemSwitcherUserLayer
     }
 
     /**
-     * @return a transition is currently in progress
-     */
-    public boolean getTransitionInProgress()
-    {
-        return this.transitionInProgress;
-    }
-
-    /**
-     * @return position of the transition (T-slider) bar, range 0-9999
-     */
-    public int getTransitionPosition()
-    {
-        return this.transitionPosition;
-    }
-
-    /**
      * @param position sets the transition (T-slider), range 0-9999
      *
      * @return successful command execution
@@ -372,112 +311,5 @@ public class BlackmagicAtemSwitcherUserLayer
         final byte high = (byte) ((input >> 8) & 0xFF);
         final byte low = (byte) (input & 0xFF);
         return this.transportLayer.sendCommand("CAuS", new byte[]{1, 0, high, low});
-    }
-
-
-
-
-    // TODO not sure which way this is...
-    public int getVideoSrcIndex(int videoSrc)
-    {
-        switch (videoSrc)
-        {
-            case 0:  // Black
-                return 0;
-            case 1:  // Input 1
-                return 1;
-            case 2:  // Input 2
-                return 2;
-            case 3:  // Input 3
-                return 3;
-            case 4:  // Input 4
-                return 4;
-            case 5:  // Input 5
-                return 5;
-            case 6:  // Input 6
-                return 6;
-            case 7:  // Input 7
-                return 7;
-            case 8:  // Input 8
-                return 8;
-            case 9:  // Input 9
-                return 9;
-            case 10:  // Input 10
-                return 10;
-            case 11:  // Input 11
-                return 11;
-            case 12:  // Input 12
-                return 12;
-            case 13:  // Input 13
-                return 13;
-            case 14:  // Input 14
-                return 14;
-            case 15:  // Input 15
-                return 15;
-            case 16:  // Input 16
-                return 16;
-            case 17:  // Input 17
-                return 17;
-            case 18:  // Input 18
-                return 18;
-            case 19:  // Input 19
-                return 19;
-            case 20:  // Input 20
-                return 20;
-            case 1000:  // Color Bars
-                return 21;
-            case 2001:  // Color 1
-                return 22;
-            case 2002:  // Color 2
-                return 23;
-            case 3010:  // Media Player 1
-                return 24;
-            case 3011:  // Media Player 1 Key
-                return 25;
-            case 3020:  // Media Player 2
-                return 26;
-            case 3021:  // Media Player 2 Key
-                return 27;
-            case 4010:  // Key 1 Mask
-                return 28;
-            case 4020:  // Key 2 Mask
-                return 29;
-            case 4030:  // Key 3 Mask
-                return 30;
-            case 4040:  // Key 4 Mask
-                return 31;
-            case 5010:  // DSK 1 Mask
-                return 32;
-            case 5020:  // DSK 2 Mask
-                return 33;
-            case 6000:  // Super Source
-                return 34;
-            case 7001:  // Clean Feed 1
-                return 35;
-            case 7002:  // Clean Feed 2
-                return 36;
-            case 8001:  // Auxilary 1
-                return 37;
-            case 8002:  // Auxilary 2
-                return 38;
-            case 8003:  // Auxilary 3
-                return 39;
-            case 8004:  // Auxilary 4
-                return 40;
-            case 8005:  // Auxilary 5
-                return 41;
-            case 8006:  // Auxilary 6
-                return 42;
-            case 10010:  // ME 1 Prog
-                return 43;
-            case 10011:  // ME 1 Prev
-                return 44;
-            case 10020:  // ME 2 Prog
-                return 45;
-            case 10021:  // ME 2 Prev
-                return 46;
-            default:
-                return 0;
-        }
     }
 }

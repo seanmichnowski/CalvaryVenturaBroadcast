@@ -1,4 +1,4 @@
-JFDML JFormDesigner: "7.0.5.1.409" Java: "17.0.4.1" encoding: "UTF-8"
+JFDML JFormDesigner: "8.0.3.0.246" Java: "17.0.6" encoding: "UTF-8"
 
 new FormModel {
 	contentType: "form/swing"
@@ -6,8 +6,8 @@ new FormModel {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
 			name: "this"
 			"border": new javax.swing.border.EmptyBorder( 6, 0, 6, 0 )
-			"preferredSize": new java.awt.Dimension( 269, 50 )
-			"minimumSize": new java.awt.Dimension( 249, 50 )
+			"preferredSize": new java.awt.Dimension( 269, 70 )
+			"minimumSize": new java.awt.Dimension( 249, 70 )
 			"opaque": false
 			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 				"$columnSpecs": "0, 0:1.0, 0"
@@ -20,8 +20,8 @@ new FormModel {
 				name: "panelContent"
 				"border": new javax.swing.border.CompoundBorder( new javax.swing.border.LineBorder( new java.awt.Color( 204, 0, 204, 255 ), 2, false ), new javax.swing.border.CompoundBorder( new javax.swing.border.SoftBevelBorder( 1, null, null, null, null ), new javax.swing.border.EmptyBorder( 2, 2, 2, 2 ) ) )
 				"background": sfield java.awt.Color black
-				"minimumSize": new java.awt.Dimension( 249, 50 )
-				"preferredSize": new java.awt.Dimension( 269, 50 )
+				"minimumSize": new java.awt.Dimension( 249, 70 )
+				"preferredSize": new java.awt.Dimension( 269, 70 )
 				add( new FormComponent( "javax.swing.JButton" ) {
 					name: "buttonGoTo"
 					"toolTipText": "Goto this preset camera angle"
@@ -32,9 +32,8 @@ new FormModel {
 					"minimumSize": new java.awt.Dimension( 50, 46 )
 					"preferredSize": new java.awt.Dimension( 50, 46 )
 					"foreground": new java.awt.Color( 0, 165, 44, 255 )
-					"background": sfield java.awt.Color black
+					"background": sfield java.awt.Color darkGray
 					"iconTextGap": 2
-					"opaque": false
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 				add( new FormComponent( "javax.swing.JTextField" ) {
 					name: "textFieldName"
@@ -58,9 +57,8 @@ new FormModel {
 					"preferredSize": new java.awt.Dimension( 100, 30 )
 					"minimumSize": new java.awt.Dimension( 100, 30 )
 					"maximumSize": new java.awt.Dimension( 100, 30 )
-					"background": sfield java.awt.Color black
+					"background": sfield java.awt.Color darkGray
 					"iconTextGap": 2
-					"opaque": false
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridx": 2
 				} )

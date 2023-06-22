@@ -39,9 +39,6 @@ public class BroadcastControlMain extends JFrame
         new BroadcastControlMain();
     }
 
-// TODO maybe each time you press something in the camera UI it should remove all color, and only show color on a returned 'TRUE'
-//  TODO kind of like this... need to make the camera and switcher button colors more synched.....
-
     /**
      * Initializes the major UI panels, etc.
      */
@@ -53,31 +50,30 @@ public class BroadcastControlMain extends JFrame
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
         this.setVisible(true);
 
-        // initialize command senders
+        // initialize LEFT/RIGHT camera command senders
         this.settings = new BroadcastSettings();
         this.leftCameraController = new PtzCameraController("LEFT", this.settings.getLeftCameraIp(), 5678);
         this.rightCameraController = new PtzCameraController("RIGHT", this.settings.getRightCameraIp(), 5678);
         this.leftCameraController.onCameraConnectionStatus(connected -> this.leftCameraControlPanel.setCameraConnectionStatus(connected));
         this.rightCameraController.onCameraConnectionStatus(connected -> this.rightCameraControlPanel.setCameraConnectionStatus(connected));
 
+        // connect LEFT camera UI panel actions
         this.leftCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
         {
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return leftCameraController.setPreset(presetIdx);
+                return leftCameraController.savePreset(presetIdx);
             }
 
             @Override
-            public boolean callPreviewPressed(int presetIdx)
+            public boolean callPressed(int presetIdx)
             {
-                return leftCameraController.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex()) && rightCameraControlPanel.clearPreviewAndProgramHighlights();
-            }
-
-            @Override
-            public boolean callProgramPressed(int presetIdx)
-            {
-                return switcherCommandSender.performAuto();
+                // attempt to move the camera, also show this camera in the preview window
+                final boolean cameraMoveOk = leftCameraController.moveToPreset(presetIdx);
+                switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex());
+                SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnLeftRightCameraUis());
+                return cameraMoveOk;
             }
 
             @Override
@@ -87,48 +83,35 @@ public class BroadcastControlMain extends JFrame
             }
 
             @Override
-            public boolean focus(double focus)
-            {
-                return leftCameraController.changeFocus(focus);
-            }
-
-            @Override
             public boolean zoom(double zoom)
             {
                 return leftCameraController.changeZoom(zoom);
             }
         });
 
+        // connect RIGHT camera UI panel actions
         this.rightCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
         {
             @Override
             public boolean setPressed(int presetIdx)
             {
-                return rightCameraController.setPreset(presetIdx);
+                return rightCameraController.savePreset(presetIdx);
             }
 
             @Override
-            public boolean callPreviewPressed(int presetIdx)
+            public boolean callPressed(int presetIdx)
             {
-                return rightCameraController.callPreset(presetIdx) && switcherCommandSender.setPreviewVideo(settings.getRightCameraVideoIndex()) && leftCameraControlPanel.clearPreviewAndProgramHighlights(); // TODO use macro
-            }
-
-            @Override
-            public boolean callProgramPressed(int presetIdx)
-            {
-                return switcherCommandSender.performAuto();
+                // attempt to move the camera, also show this camera in the preview window
+                final boolean cameraMoveOk = rightCameraController.moveToPreset(presetIdx);
+                switcherCommandSender.setPreviewVideo(settings.getRightCameraVideoIndex());
+                SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnLeftRightCameraUis());
+                return cameraMoveOk;
             }
 
             @Override
             public boolean panTilt(double pan, double tilt)
             {
                 return rightCameraController.panAndTilt(pan, tilt);
-            }
-
-            @Override
-            public boolean focus(double focus)
-            {
-                return rightCameraController.changeFocus(focus);
             }
 
             @Override
@@ -148,11 +131,17 @@ public class BroadcastControlMain extends JFrame
 
         // connections for the switcher's status to get updated on the UI control panel
         this.switcherCommandSender.addUpstreamKeyOnAirConsumer(keyOnAir -> this.switcherControlPanel.setLyricsStatus(keyOnAir));
-        this.switcherCommandSender.addFadeToBlackActiveConsumer(ftb -> this.switcherControlPanel.setFadeToBlackOnStatus(ftb));
+        this.switcherCommandSender.addFadeToBlackActiveAndTransitionConsumer((active, transition) -> this.switcherControlPanel.setFadeToBlackOnStatus(active, transition));
         this.switcherCommandSender.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
-        this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> this.switcherControlPanel.setPreviewSourceStatus(previewIdx));
-        this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> this.switcherControlPanel.setProgramSourceStatus(programIdx));
         this.switcherCommandSender.addConnectionStatusConsumer(connected -> this.switcherControlPanel.setSwitcherConnectionStatus(connected));
+        this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> {
+            this.switcherControlPanel.setPreviewSourceStatus(previewIdx);
+            this.updatePreviewProgramColorsOnLeftRightCameraUis(); // reflect on UI when switcher changes its source
+        });
+        this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> {
+            this.switcherControlPanel.setProgramSourceStatus(programIdx);
+            this.updatePreviewProgramColorsOnLeftRightCameraUis(); // reflect on UI when switcher changes its source
+        });
 
         // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
         this.switcherControlPanel.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
@@ -163,6 +152,24 @@ public class BroadcastControlMain extends JFrame
 
         // after all the UI initialization is done, finally start the connection to the switcher
         this.switcherCommandSender.initialize(settings.getSwitcherIp());
+    }
+
+    /**
+     * The PTZ camera UI panels (for LEFT and RIGHT cameras) can have their active colors
+     * updated to reflect the state of the video switcher. This method gets called whenever
+     * the switcher goes to a new state, so we can reflect preview/program states on the camera UI's.
+     */
+    private void updatePreviewProgramColorsOnLeftRightCameraUis()
+    {
+        // pull current preview/program sources
+        final int previewIdx = this.switcherCommandSender.getCurrentVideoPreviewIdx();
+        final int programIdx = this.switcherCommandSender.getCurrentVideoProgramIdx();
+        final int leftCameraIdx = this.settings.getLeftCameraVideoIndex();
+        final int rightCameraIdx = this.settings.getRightCameraVideoIndex();
+
+        // update cameras
+        this.leftCameraControlPanel.setActivePresetBackgroundColor(programIdx == leftCameraIdx ? Color.RED : previewIdx == leftCameraIdx ? Color.GREEN : null);
+        this.rightCameraControlPanel.setActivePresetBackgroundColor(programIdx == rightCameraIdx ? Color.RED : previewIdx == rightCameraIdx ? Color.GREEN : null);
     }
 
     /**
@@ -195,15 +202,15 @@ public class BroadcastControlMain extends JFrame
             panel1.setName("panel1");
             panel1.setLayout(new GridBagLayout());
             ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0, 0};
-            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0, 0};
+            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 250, 0};
             ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0, 1.0E-4};
-            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 0.4, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 0.2, 1.0E-4};
 
             //---- leftCameraControlPanel ----
             leftCameraControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                new EmptyBorder(5, 5, 5, 5)));
+                new EmptyBorder(0, 5, 5, 5)));
             leftCameraControlPanel.setName("leftCameraControlPanel");
             panel1.add(leftCameraControlPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -211,9 +218,9 @@ public class BroadcastControlMain extends JFrame
 
             //---- rightCameraControlPanel ----
             rightCameraControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                new EmptyBorder(5, 5, 5, 5)));
+                new EmptyBorder(0, 5, 5, 5)));
             rightCameraControlPanel.setName("rightCameraControlPanel");
             panel1.add(rightCameraControlPanel, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -221,7 +228,7 @@ public class BroadcastControlMain extends JFrame
 
             //---- switcherControlPanel ----
             switcherControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(178, 0, 178), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
                 new EmptyBorder(5, 5, 5, 5)));
             switcherControlPanel.setName("switcherControlPanel");
