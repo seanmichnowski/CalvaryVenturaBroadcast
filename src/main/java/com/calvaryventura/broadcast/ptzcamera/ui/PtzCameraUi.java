@@ -211,8 +211,8 @@ public class PtzCameraUi extends JPanel
             new Insets(0, 0, 10, 0), 0, 0));
 
         //---- directionalSwipePanel ----
-        directionalSwipePanel.setMinimumSize(new Dimension(300, 200));
-        directionalSwipePanel.setPreferredSize(new Dimension(300, 200));
+        directionalSwipePanel.setMinimumSize(new Dimension(300, 150));
+        directionalSwipePanel.setPreferredSize(new Dimension(300, 150));
         directionalSwipePanel.setDisplayMessage("PAN & TILT");
         directionalSwipePanel.setName("directionalSwipePanel");
         add(directionalSwipePanel, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,

@@ -1,9 +1,12 @@
 package com.calvaryventura.broadcast.ptzcamera.ui;
 
+import com.calvaryventura.broadcast.settings.BroadcastSettings;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -48,6 +51,24 @@ public class PtzCameraUiItem extends JPanel implements Serializable
             public void changedUpdate(DocumentEvent e)
             {
                 presetNameChangedAction.run();
+            }
+        });
+
+
+        // TODO
+        this.textFieldName.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent e)
+            {
+                super.mousePressed(e);
+                if (e.getClickCount() == 2)
+                {
+                    new BroadcastPopupComboboxUi(BroadcastSettings.getInst().getDefaultPresetNames(), textFieldName.getText(), sel -> {
+                        textFieldName.setText(sel);
+                        System.out.printf("selected: %s\n", sel);
+                    });
+                }
             }
         });
     }

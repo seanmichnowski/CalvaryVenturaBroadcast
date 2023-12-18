@@ -2,6 +2,7 @@ package com.calvaryventura.broadcast.main;
 
 import java.awt.*;
 import java.lang.invoke.MethodHandles;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import javax.swing.border.*;
 
@@ -10,7 +11,10 @@ import com.calvaryventura.broadcast.ptzcamera.ui.IPtzCameraUiCallbacks;
 import com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi;
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
-import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUi;
+import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
+import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUiCallbacks;
+import com.calvaryventura.broadcast.switcher.ui.withmultiview.BroadcastSwitcherMultiviewControlPanelUi;
+import com.calvaryventura.broadcast.switcher.ui.withoutmultiview.BroadcastSwitcherControlPanelUi;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +55,7 @@ public class BroadcastControlMain extends JFrame
         this.setVisible(true);
 
         // initialize LEFT/RIGHT camera command senders
-        this.settings = new BroadcastSettings();
+        this.settings = BroadcastSettings.getInst();
         this.leftCameraController = new PtzCameraController("LEFT", this.settings.getLeftCameraIp(), 5678);
         this.rightCameraController = new PtzCameraController("RIGHT", this.settings.getRightCameraIp(), 5678);
         this.leftCameraController.onCameraConnectionStatus(connected -> this.leftCameraControlPanel.setCameraConnectionStatus(connected));
@@ -121,30 +125,69 @@ public class BroadcastControlMain extends JFrame
             }
         });
 
+        // set up the video switcher control UI implementation
+        final AbstractBroadcastSwitcherUi videoSwitcherControllerUi = this.settings.isVideoSwitcherMultiviewEnabled()
+                ? new BroadcastSwitcherMultiviewControlPanelUi() : new BroadcastSwitcherControlPanelUi();
+        this.switcherControlPanel.add(videoSwitcherControllerUi, BorderLayout.CENTER);
+
         // connections for the switcher's UI control panel to actually send commands
-        this.switcherControlPanel.onAutoPressed(e -> this.switcherCommandSender.performAuto());
-        this.switcherControlPanel.onCutPressed(e -> this.switcherCommandSender.performCut());
-        this.switcherControlPanel.onLyricsPressed(this.switcherCommandSender::setKeyerOnAirEnabled);
-        this.switcherControlPanel.onFadeToBlackPressed(e -> this.switcherCommandSender.performFadeToBlack());
-        this.switcherControlPanel.onPreviewSourceChanged(this.switcherCommandSender::setPreviewVideo);
-        this.switcherControlPanel.onProgramSourceChanged(this.switcherCommandSender::setProgramVideo);
+        final AtomicBoolean lyricsEnabled = new AtomicBoolean(false);
+        videoSwitcherControllerUi.setCallbacks(new BroadcastSwitcherUiCallbacks()
+        {
+            @Override
+            public void onPreviewSourceChanged(int previewSourceChanged)
+            {
+                switcherCommandSender.setPreviewVideo(previewSourceChanged);
+            }
+
+            @Override
+            public void onProgramSourceChanged(int programSourceChanged)
+            {
+                switcherCommandSender.setProgramVideo(programSourceChanged);
+            }
+
+            @Override
+            public void onFadeToBlack()
+            {
+                switcherCommandSender.performFadeToBlack();
+            }
+
+            @Override
+            public void onLyricsEnabled()
+            {
+                lyricsEnabled.set(!lyricsEnabled.get());
+                switcherCommandSender.setKeyerOnAirEnabled(lyricsEnabled.get());
+            }
+
+            @Override
+            public void onFadePressed()
+            {
+                switcherCommandSender.performAuto();
+            }
+
+            @Override
+            public void onCutPressed()
+            {
+                switcherCommandSender.performCut();
+            }
+        });
 
         // connections for the switcher's status to get updated on the UI control panel
-        this.switcherCommandSender.addUpstreamKeyOnAirConsumer(keyOnAir -> this.switcherControlPanel.setLyricsStatus(keyOnAir));
-        this.switcherCommandSender.addFadeToBlackActiveAndTransitionConsumer((active, transition) -> this.switcherControlPanel.setFadeToBlackOnStatus(active, transition));
-        this.switcherCommandSender.addTransitionInProgressConsumer(progress -> this.switcherControlPanel.setFadeTransitionInProgressStatus(progress));
-        this.switcherCommandSender.addConnectionStatusConsumer(connected -> this.switcherControlPanel.setSwitcherConnectionStatus(connected));
+        this.switcherCommandSender.addUpstreamKeyOnAirConsumer(videoSwitcherControllerUi::setLyricsStatus);
+        this.switcherCommandSender.addFadeToBlackActiveAndTransitionConsumer(videoSwitcherControllerUi::setFadeToBlackStatus);
+        this.switcherCommandSender.addTransitionInProgressConsumer(videoSwitcherControllerUi::setFadeTransitionInProgressStatus);
+        this.switcherCommandSender.addConnectionStatusConsumer(videoSwitcherControllerUi::setSwitcherConnectionStatus);
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> {
-            this.switcherControlPanel.setPreviewSourceStatus(previewIdx);
+            videoSwitcherControllerUi.setPreviewSourceStatus(previewIdx);
             this.updatePreviewProgramColorsOnLeftRightCameraUis(); // reflect on UI when switcher changes its source
         });
         this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> {
-            this.switcherControlPanel.setProgramSourceStatus(programIdx);
+            videoSwitcherControllerUi.setProgramSourceStatus(programIdx);
             this.updatePreviewProgramColorsOnLeftRightCameraUis(); // reflect on UI when switcher changes its source
         });
 
         // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
-        this.switcherControlPanel.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
+        videoSwitcherControllerUi.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
 
         // load saved presets for the PTZ camera control panels
         this.leftCameraControlPanel.loadPresetsSavedToDisk();
@@ -182,7 +225,7 @@ public class BroadcastControlMain extends JFrame
         JPanel panel1 = new JPanel();
         leftCameraControlPanel = new PtzCameraUi();
         rightCameraControlPanel = new PtzCameraUi();
-        switcherControlPanel = new BroadcastSwitcherUi();
+        switcherControlPanel = new JPanel();
 
         //======== this ========
         setTitle("Calvary Ventura Camera Control");
@@ -204,13 +247,15 @@ public class BroadcastControlMain extends JFrame
             ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0, 0};
             ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 250, 0};
             ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0, 1.0E-4};
-            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 0.2, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {0.6, 1.0, 1.0E-4};
 
             //---- leftCameraControlPanel ----
             leftCameraControlPanel.setBorder(new CompoundBorder(
                 new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
                 new EmptyBorder(0, 5, 5, 5)));
+            leftCameraControlPanel.setPreferredSize(new Dimension(324, 500));
+            leftCameraControlPanel.setMinimumSize(new Dimension(324, 500));
             leftCameraControlPanel.setName("leftCameraControlPanel");
             panel1.add(leftCameraControlPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -221,17 +266,25 @@ public class BroadcastControlMain extends JFrame
                 new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                     new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
                 new EmptyBorder(0, 5, 5, 5)));
+            rightCameraControlPanel.setPreferredSize(new Dimension(324, 500));
+            rightCameraControlPanel.setMinimumSize(new Dimension(324, 500));
             rightCameraControlPanel.setName("rightCameraControlPanel");
             panel1.add(rightCameraControlPanel, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 20, 0), 0, 0));
 
-            //---- switcherControlPanel ----
-            switcherControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                    new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                new EmptyBorder(5, 5, 5, 5)));
-            switcherControlPanel.setName("switcherControlPanel");
+            //======== switcherControlPanel ========
+            {
+                switcherControlPanel.setBorder(new CompoundBorder(
+                    new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                        new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
+                    new EmptyBorder(5, 5, 5, 5)));
+                switcherControlPanel.setOpaque(false);
+                switcherControlPanel.setPreferredSize(new Dimension(24, 200));
+                switcherControlPanel.setMinimumSize(new Dimension(24, 200));
+                switcherControlPanel.setName("switcherControlPanel");
+                switcherControlPanel.setLayout(new BorderLayout());
+            }
             panel1.add(switcherControlPanel, new GridBagConstraints(0, 1, 2, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 0), 0, 0));
@@ -245,6 +298,6 @@ public class BroadcastControlMain extends JFrame
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
     private PtzCameraUi leftCameraControlPanel;
     private PtzCameraUi rightCameraControlPanel;
-    private BroadcastSwitcherUi switcherControlPanel;
+    private JPanel switcherControlPanel;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

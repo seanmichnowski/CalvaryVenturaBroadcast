@@ -36,8 +36,8 @@ new FormModel {
 			} )
 			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi" ) {
 				name: "directionalSwipePanel"
-				"minimumSize": new java.awt.Dimension( 300, 200 )
-				"preferredSize": new java.awt.Dimension( 300, 200 )
+				"minimumSize": new java.awt.Dimension( 300, 150 )
+				"preferredSize": new java.awt.Dimension( 300, 150 )
 				"displayMessage": "PAN & TILT"
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridy": 2

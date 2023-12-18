@@ -13,7 +13,7 @@ new FormModel {
 			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/icons/camera_fullsize.png" )
 			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 				"$columnSpecs": "0:1.0, 0:1.0"
-				"$rowSpecs": "0:1.0, 250:0.2"
+				"$rowSpecs": "0:0.6, 250:1.0"
 				"$alignTop": true
 				"$alignLeft": true
 				"$hGap": 25
@@ -28,16 +28,23 @@ new FormModel {
 				add( new FormComponent( "com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi" ) {
 					name: "leftCameraControlPanel"
 					"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "LEFT Camera", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 0, 5, 5, 5 ) )
+					"preferredSize": new java.awt.Dimension( 324, 500 )
+					"minimumSize": new java.awt.Dimension( 324, 500 )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 				add( new FormComponent( "com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi" ) {
 					name: "rightCameraControlPanel"
 					"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "RIGHT Camera", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 0, 5, 5, 5 ) )
+					"preferredSize": new java.awt.Dimension( 324, 500 )
+					"minimumSize": new java.awt.Dimension( 324, 500 )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridx": 1
 				} )
-				add( new FormComponent( "com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUi" ) {
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
 					name: "switcherControlPanel"
 					"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "Video Switcher", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 5, 5, 5, 5 ) )
+					"opaque": false
+					"preferredSize": new java.awt.Dimension( 24, 200 )
+					"minimumSize": new java.awt.Dimension( 24, 200 )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridy": 1
 					"gridwidth": 2

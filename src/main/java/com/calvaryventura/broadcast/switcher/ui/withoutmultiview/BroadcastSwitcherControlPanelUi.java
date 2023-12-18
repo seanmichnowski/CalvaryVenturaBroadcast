@@ -1,4 +1,7 @@
-package com.calvaryventura.broadcast.switcher.ui;
+package com.calvaryventura.broadcast.switcher.ui.withoutmultiview;
+
+import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
+import com.calvaryventura.broadcast.uiwidgets.VerticalLabelUI;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -11,11 +14,11 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Simple control panel for the video switcher. Contains functions like FadeToBlack, CUT, etc.
+ * Simple control panel for the video switcher. Contains functions like FadeToBlack, CUT, FADE, etc.
  * Call {@link #setVideoSourceNamesAndSwitcherIndexes(Map)} early in the initialization process
  * which will dynamically create buttons for program and preview, one button for each video source.
  */
-public class BroadcastSwitcherUi extends JPanel
+public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
 {
     // local states
     private boolean fadeToBlackOnStatus;
@@ -35,7 +38,7 @@ public class BroadcastSwitcherUi extends JPanel
     /**
      * Creates the basic UI elements and callbacks.
      */
-    public BroadcastSwitcherUi()
+    public BroadcastSwitcherControlPanelUi()
     {
         this.initComponents();
         this.buttonToggleLyrics.addActionListener(e -> {

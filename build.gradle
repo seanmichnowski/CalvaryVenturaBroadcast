@@ -35,7 +35,7 @@ dependencies {
     compile 'org.apache.httpcomponents:httpclient:4.5.10'
     compile 'org.apache.httpcomponents:httpcore:4.4.1'
     compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.1'
-
+    compile 'uk.co.caprica:vlcj:4.8.2'
 }
 
 
@@ -54,11 +54,11 @@ task createStandaloneJarTask(type: Jar) {
     }
 
     // output jar filename setup
-    baseName   = 'Calvary_Ventura_Camera_Controller'   // start of filename
-    classifier = null                       // end of filename
-    version    = null                       // don't include version #'s
+    baseName   = 'Broadcast_Control_Station' // start of filename
+    classifier = null                        // end of filename
+    version    = null                        // don't include version #'s
 
-    // include various files inside-of-the-source-tree into the output jar
+    // include various files inside of the source tree into the output jar
     from('src') {
         into 'src'
         include '**/*'

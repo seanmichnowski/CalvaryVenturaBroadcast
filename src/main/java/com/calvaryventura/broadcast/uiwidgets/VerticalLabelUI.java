@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.switcher.ui;
+package com.calvaryventura.broadcast.uiwidgets;
 
 import javax.swing.Icon;
 import javax.swing.JComponent;
