@@ -2,11 +2,12 @@ package com.calvaryventura.broadcast.switcher.ui.withmultiview;
 
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.border.*;
 
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUiCallbacks;
-import com.sun.jna.NativeLibrary;
+import com.calvaryventura.broadcast.uiwidgets.DragScrollListener;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +30,9 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.IntStream;
 
@@ -44,13 +43,21 @@ import java.util.stream.IntStream;
  */
 public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastSwitcherUi
 {
+    // VLC macros
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final String PATH_ENVIRONMENT_VARIABLE = "PATH";
     private static final String VLC_INSTALLATION_NAME = "vlc";
-    private static final String VLC_LIBRARY_NAME = "libvlc";
     private static final int VLC_MINIMUM_VERSION = 3;
     private static final String VLC_NOT_INSTALLED_ERROR_MSG = "<html>You must install the program 'VLC' in order" +
             "<br>to view the multiview screen in real-time.<br>See: <u>https://www.videolan.org/vlc/#download</u></html>";
+
+    // help display contents
+    private static final String HELP_TEXT = "<html>Multiview screen available actions:<br><ul>" +
+            "<li>Clicking the 'Preview' pane performs a fade</li>" +
+            "<li>Clicking the 'Program' pane performs a cut</li>" +
+            "<li>Single-Clicking any of the input panes puts it into Preview</li>" +
+            "<li>Double-Clicking any of the input panes puts it into Program</li>" +
+            "</ul><br>Double-clicking any camera preset name provides" +
+            "a list of default options you can choose from.<br></html>";
 
     // local vars
     private final BroadcastSettings broadcastSettings;
@@ -66,6 +73,11 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         this.initComponents();
         this.broadcastSettings = BroadcastSettings.getInst();
 
+        // set the help JTextPane to honor it's JFormDesigner font settings, and provide the text
+        this.textPaneHelp.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
+        this.textPaneHelp.setText(HELP_TEXT);
+        new DragScrollListener(this.textPaneHelp); // enable iPhone-like scrolling
+
         // button connections
         this.buttonFadeToBlack.addActionListener(e -> this.callbacks.onFadeToBlack());
         this.buttonToggleLyrics.addActionListener(e -> this.callbacks.onLyricsEnabled());
@@ -80,7 +92,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         this.player = videoCanvas.mediaPlayer();
 
         // ensure we have VLC before attempting to start playback, otherwise show an error
-        if (verifyVlcInstallationOnHostComputer())
+        if (true) // TODO verifyVlcInstallationOnHostComputer())
         {
             this.panelVideo.add(videoCanvas, BorderLayout.CENTER);
             this.initializeMouseSelectionOnMultiviewPanel(videoCanvas);
@@ -104,20 +116,14 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     {
         try
         {
-            // find executable by name by searching all directories on the host computer's PATH
-            final String absolutePath = Arrays.stream(System.getenv(PATH_ENVIRONMENT_VARIABLE).split(File.pathSeparator))
-                    .map(directory -> new File(directory, VLC_INSTALLATION_NAME))
-                    .filter(file -> file.isFile() && file.canExecute()).findFirst()
-                    .map(File::getAbsolutePath).orElseThrow(() -> new RuntimeException("Cannot locate VLC installation on host computer"));
-
             // get the vlc version by invoking the program
-            final Process process = Runtime.getRuntime().exec(absolutePath + " --version");
+            final Process process = Runtime.getRuntime().exec(VLC_INSTALLATION_NAME + " --version");
             try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream())))
             {
                 // pull the version from the command's output, example: "VLC version 3.0.8 Vetinari (3.0.8-0-gf350b6b5a7)"
                 final String versionStr = in.lines()
                         .filter(l -> l.toLowerCase().contains("version")).findFirst()
-                        .orElseThrow(() -> new RuntimeException("Cannot find the version of VLC installation at " + absolutePath));
+                        .orElseThrow(() -> new RuntimeException("Cannot find the version of VLC installation '" + VLC_INSTALLATION_NAME + "'. Check path or installation."));
 
                 // for the input string seen above, this would return "3.0.8" as vlcVersion, start and end being 4 and 5 respectively
                 final int versionStrIdxStart = versionStr.indexOf("version");
@@ -129,11 +135,8 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                 logger.info("Installed VLC version: {}... {} (>={})", vlcVersion, pass ? "OK" : "FAIL", VLC_MINIMUM_VERSION);
                 if (!pass)
                 {
-                    logger.info("Current VLC installation: '{}', but we require at least version {} or higher", absolutePath, VLC_MINIMUM_VERSION);
+                    logger.info("VLC is installed, but we require at least version {} or higher", VLC_MINIMUM_VERSION);
                 }
-
-                // add this VLC path to the native library path
-                NativeLibrary.addSearchPath(VLC_LIBRARY_NAME, absolutePath);
                 return pass;
             }
         } catch (Exception e)
@@ -270,7 +273,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
      * and determine WHERE in the playing video we are clicking.
      *
      * @param videoPlaybackSize this is the actual size of the playing video and NEVER changes (for example, WxH 480x360 or 1920x1080 etc.)
-     * @param videoCanvasSize this is the size of the canvas playing the actual video and WILL change as the parent program is resized
+     * @param videoCanvasSize   this is the size of the canvas playing the actual video and WILL change as the parent program is resized
      */
     private void videoCanvasRectangleResized(Dimension videoPlaybackSize, Dimension videoCanvasSize)
     {
@@ -332,7 +335,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     @Override
     public void setFadeTransitionInProgressStatus(boolean active)
     {
-        this.labelTransitionInProgress.setText(active ? "Transition in progress..." : "");
+        this.labelTransitionInProgress.setForeground(active ? Color.YELLOW : Color.BLACK);
     }
 
     /**
@@ -421,133 +424,178 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents  @formatter:off
+        panelVideo = new JPanel();
         JPanel panel1 = new JPanel();
+        JPanel panel2 = new JPanel();
+        labelTransitionInProgress = new JLabel();
+        labelConnectionStatus = new JLabel();
         buttonToggleLyrics = new JButton();
         buttonFadeToBlack = new JButton();
         buttonhelp = new JButton();
-        labelTransitionInProgress = new JLabel();
-        labelConnectionStatus = new JLabel();
-        panelVideo = new JPanel();
-        dialogHelp = new JDialog();
-        JScrollPane scrollPane1 = new JScrollPane();
-        JTextPane textPane1 = new JTextPane();
+        dialogHelp = new JFrame();
+        JPanel panelHelpContents = new JPanel();
+        JScrollPane scrollPaneHelp = new JScrollPane();
+        textPaneHelp = new JTextPane();
         buttonCloseHelp = new JButton();
 
         //======== this ========
         setBackground(Color.black);
         setName("this");
         setLayout(new GridBagLayout());
-        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 0};
+        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};
         ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).columnWeights = new double[] {0.1, 1.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
         ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 1.0E-4};
-
-        //======== panel1 ========
-        {
-            panel1.setOpaque(false);
-            panel1.setName("panel1");
-            panel1.setLayout(new GridBagLayout());
-            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0};
-            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0, 0};
-            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0, 0.0, 0.0, 1.0E-4};
-
-            //---- buttonToggleLyrics ----
-            buttonToggleLyrics.setText("<html>Toggle<br>Lyrics</html>");
-            buttonToggleLyrics.setForeground(Color.cyan);
-            buttonToggleLyrics.setBackground(Color.darkGray);
-            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            buttonToggleLyrics.setName("buttonToggleLyrics");
-            panel1.add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
-
-            //---- buttonFadeToBlack ----
-            buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
-            buttonFadeToBlack.setForeground(Color.cyan);
-            buttonFadeToBlack.setBackground(Color.darkGray);
-            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            buttonFadeToBlack.setPreferredSize(new Dimension(120, 50));
-            buttonFadeToBlack.setName("buttonFadeToBlack");
-            panel1.add(buttonFadeToBlack, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
-
-            //---- buttonhelp ----
-            buttonhelp.setText("Help");
-            buttonhelp.setForeground(Color.lightGray);
-            buttonhelp.setBackground(Color.black);
-            buttonhelp.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonhelp.setHorizontalAlignment(SwingConstants.CENTER);
-            buttonhelp.setIcon(new ImageIcon(getClass().getResource("/icons/people_connection_32x32.png")));
-            buttonhelp.setName("buttonhelp");
-            panel1.add(buttonhelp, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
-
-            //---- labelTransitionInProgress ----
-            labelTransitionInProgress.setForeground(Color.yellow);
-            labelTransitionInProgress.setBackground(Color.black);
-            labelTransitionInProgress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            labelTransitionInProgress.setHorizontalAlignment(SwingConstants.LEFT);
-            labelTransitionInProgress.setName("labelTransitionInProgress");
-            panel1.add(labelTransitionInProgress, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
-
-            //---- labelConnectionStatus ----
-            labelConnectionStatus.setText("Switcher not connected :(");
-            labelConnectionStatus.setForeground(Color.red);
-            labelConnectionStatus.setBackground(Color.black);
-            labelConnectionStatus.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-            labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
-            labelConnectionStatus.setName("labelConnectionStatus");
-            panel1.add(labelConnectionStatus, new GridBagConstraints(0, 4, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 0, 0), 0, 0));
-        }
-        add(panel1, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 5), 0, 0));
 
         //======== panelVideo ========
         {
             panelVideo.setOpaque(false);
             panelVideo.setName("panelVideo");
             panelVideo.setLayout(new BorderLayout());
+
+            //======== panel1 ========
+            {
+                panel1.setOpaque(false);
+                panel1.setBorder(new EmptyBorder(1, 0, 10, 0));
+                panel1.setName("panel1");
+                panel1.setLayout(new GridBagLayout());
+                ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
+                ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0};
+                ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {0.0, 0.0, 0.0, 1.0, 1.0E-4};
+                ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
+
+                //======== panel2 ========
+                {
+                    panel2.setOpaque(false);
+                    panel2.setName("panel2");
+                    panel2.setLayout(new GridBagLayout());
+                    ((GridBagLayout)panel2.getLayout()).columnWidths = new int[] {0, 0};
+                    ((GridBagLayout)panel2.getLayout()).rowHeights = new int[] {0, 0, 0};
+                    ((GridBagLayout)panel2.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+                    ((GridBagLayout)panel2.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
+
+                    //---- labelTransitionInProgress ----
+                    labelTransitionInProgress.setBackground(Color.black);
+                    labelTransitionInProgress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    labelTransitionInProgress.setHorizontalAlignment(SwingConstants.LEFT);
+                    labelTransitionInProgress.setText("Transition In Progress...");
+                    labelTransitionInProgress.setName("labelTransitionInProgress");
+                    panel2.add(labelTransitionInProgress, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                        new Insets(0, 0, 5, 0), 0, 0));
+
+                    //---- labelConnectionStatus ----
+                    labelConnectionStatus.setText("Switcher not connected :(");
+                    labelConnectionStatus.setForeground(Color.red);
+                    labelConnectionStatus.setBackground(Color.black);
+                    labelConnectionStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
+                    labelConnectionStatus.setName("labelConnectionStatus");
+                    panel2.add(labelConnectionStatus, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                        new Insets(0, 0, 0, 0), 0, 0));
+                }
+                panel1.add(panel2, new GridBagConstraints(3, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.EAST, GridBagConstraints.VERTICAL,
+                    new Insets(0, 0, 0, 0), 0, 0));
+
+                //---- buttonToggleLyrics ----
+                buttonToggleLyrics.setText("Toggle Lyrics");
+                buttonToggleLyrics.setForeground(Color.cyan);
+                buttonToggleLyrics.setBackground(Color.darkGray);
+                buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                buttonToggleLyrics.setName("buttonToggleLyrics");
+                panel1.add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 20), 0, 0));
+
+                //---- buttonFadeToBlack ----
+                buttonFadeToBlack.setText("Fade to Black");
+                buttonFadeToBlack.setForeground(Color.cyan);
+                buttonFadeToBlack.setBackground(Color.darkGray);
+                buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                buttonFadeToBlack.setPreferredSize(new Dimension(200, 40));
+                buttonFadeToBlack.setName("buttonFadeToBlack");
+                panel1.add(buttonFadeToBlack, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 20), 0, 0));
+
+                //---- buttonhelp ----
+                buttonhelp.setText("Help");
+                buttonhelp.setForeground(Color.lightGray);
+                buttonhelp.setBackground(Color.black);
+                buttonhelp.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                buttonhelp.setHorizontalAlignment(SwingConstants.CENTER);
+                buttonhelp.setIcon(new ImageIcon(getClass().getResource("/icons/people_connection_32x32.png")));
+                buttonhelp.setName("buttonhelp");
+                panel1.add(buttonhelp, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 20), 0, 0));
+            }
+            panelVideo.add(panel1, BorderLayout.NORTH);
         }
-        add(panelVideo, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+        add(panelVideo, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
             new Insets(0, 0, 0, 0), 0, 0));
 
         //======== dialogHelp ========
         {
             dialogHelp.setTitle("Broadcast Multiview Instructions");
+            dialogHelp.setPreferredSize(new Dimension(500, 300));
+            dialogHelp.setAlwaysOnTop(true);
+            dialogHelp.setIconImage(new ImageIcon(getClass().getResource("/icons/people_connection_32x32.png")).getImage());
             dialogHelp.setName("dialogHelp");
             Container dialogHelpContentPane = dialogHelp.getContentPane();
             dialogHelpContentPane.setLayout(new BorderLayout());
 
-            //======== scrollPane1 ========
+            //======== panelHelpContents ========
             {
-                scrollPane1.setName("scrollPane1");
+                panelHelpContents.setBackground(new Color(0xffccff));
+                panelHelpContents.setBorder(new EmptyBorder(20, 20, 10, 20));
+                panelHelpContents.setName("panelHelpContents");
+                panelHelpContents.setLayout(new GridBagLayout());
+                ((GridBagLayout)panelHelpContents.getLayout()).columnWidths = new int[] {0, 0};
+                ((GridBagLayout)panelHelpContents.getLayout()).rowHeights = new int[] {0, 0, 0};
+                ((GridBagLayout)panelHelpContents.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+                ((GridBagLayout)panelHelpContents.getLayout()).rowWeights = new double[] {1.0, 0.0, 1.0E-4};
 
-                //---- textPane1 ----
-                textPane1.setContentType("text/html");
-                textPane1.setFont(new Font("Ubuntu", Font.BOLD, 16));
-                textPane1.setText("<html>You are viewing a copy of the video switcher's multiview screen.<br>This shows... </html>\n");
-                textPane1.setName("textPane1");
-                scrollPane1.setViewportView(textPane1);
+                //======== scrollPaneHelp ========
+                {
+                    scrollPaneHelp.setBackground(Color.darkGray);
+                    scrollPaneHelp.setOpaque(false);
+                    scrollPaneHelp.setBorder(null);
+                    scrollPaneHelp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+                    scrollPaneHelp.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+                    scrollPaneHelp.setName("scrollPaneHelp");
+
+                    //---- textPaneHelp ----
+                    textPaneHelp.setBackground(new Color(0xffccff));
+                    textPaneHelp.setForeground(new Color(0x9900ff));
+                    textPaneHelp.setFont(new Font("Ubuntu", Font.BOLD, 18));
+                    textPaneHelp.setBorder(null);
+                    textPaneHelp.setContentType("text/html");
+                    textPaneHelp.setEditable(false);
+                    textPaneHelp.setCaretColor(new Color(0xffccff));
+                    textPaneHelp.setName("textPaneHelp");
+                    scrollPaneHelp.setViewportView(textPaneHelp);
+                }
+                panelHelpContents.add(scrollPaneHelp, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 10, 0), 0, 0));
+
+                //---- buttonCloseHelp ----
+                buttonCloseHelp.setText("Close");
+                buttonCloseHelp.setForeground(new Color(0x9900ff));
+                buttonCloseHelp.setBackground(Color.darkGray);
+                buttonCloseHelp.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                buttonCloseHelp.setPreferredSize(new Dimension(120, 50));
+                buttonCloseHelp.setOpaque(false);
+                buttonCloseHelp.setName("buttonCloseHelp");
+                panelHelpContents.add(buttonCloseHelp, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.EAST, GridBagConstraints.VERTICAL,
+                    new Insets(0, 0, 0, 0), 0, 0));
             }
-            dialogHelpContentPane.add(scrollPane1, BorderLayout.CENTER);
-
-            //---- buttonCloseHelp ----
-            buttonCloseHelp.setText("Close");
-            buttonCloseHelp.setForeground(Color.cyan);
-            buttonCloseHelp.setBackground(Color.darkGray);
-            buttonCloseHelp.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            buttonCloseHelp.setPreferredSize(new Dimension(120, 50));
-            buttonCloseHelp.setName("buttonCloseHelp");
-            dialogHelpContentPane.add(buttonCloseHelp, BorderLayout.SOUTH);
+            dialogHelpContentPane.add(panelHelpContents, BorderLayout.CENTER);
             dialogHelp.pack();
             dialogHelp.setLocationRelativeTo(dialogHelp.getOwner());
         }
@@ -555,13 +603,14 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables  @formatter:off
+    private JPanel panelVideo;
+    private JLabel labelTransitionInProgress;
+    private JLabel labelConnectionStatus;
     private JButton buttonToggleLyrics;
     private JButton buttonFadeToBlack;
     private JButton buttonhelp;
-    private JLabel labelTransitionInProgress;
-    private JLabel labelConnectionStatus;
-    private JPanel panelVideo;
-    private JDialog dialogHelp;
+    private JFrame dialogHelp;
+    private JTextPane textPaneHelp;
     private JButton buttonCloseHelp;
     // JFormDesigner - End of variables declaration  //GEN-END:variables  @formatter:on
 }

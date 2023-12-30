@@ -153,6 +153,7 @@ public class PtzCameraUi extends JPanel
         if (this.saveFile != null)
         {
             final String lineToWrite = this.presets.stream().map(PtzCameraUiItem::getPresetName).collect(Collectors.joining(","));
+            System.out.printf("Saved preset '%s' to disk\n", lineToWrite);
             try (PrintWriter out = new PrintWriter(this.saveFile)) {
                 out.println(lineToWrite);
                 out.flush();
@@ -193,7 +194,7 @@ public class PtzCameraUi extends JPanel
         labelConnectionStatus.setName("labelConnectionStatus");
         add(labelConnectionStatus, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 10, 0), 0, 0));
+            new Insets(0, 0, 5, 0), 0, 0));
 
         //======== panelPresetsHolder ========
         {
@@ -208,7 +209,7 @@ public class PtzCameraUi extends JPanel
         }
         add(panelPresetsHolder, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 10, 0), 0, 0));
+            new Insets(0, 0, 5, 0), 0, 0));
 
         //---- directionalSwipePanel ----
         directionalSwipePanel.setMinimumSize(new Dimension(300, 150));
@@ -217,11 +218,11 @@ public class PtzCameraUi extends JPanel
         directionalSwipePanel.setName("directionalSwipePanel");
         add(directionalSwipePanel, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 10, 0), 0, 0));
+            new Insets(0, 0, 5, 0), 0, 0));
 
         //---- zoomSlider ----
-        zoomSlider.setMinimumSize(new Dimension(300, 50));
-        zoomSlider.setPreferredSize(new Dimension(300, 50));
+        zoomSlider.setMinimumSize(new Dimension(300, 45));
+        zoomSlider.setPreferredSize(new Dimension(300, 45));
         zoomSlider.setName("zoomSlider");
         add(zoomSlider, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,

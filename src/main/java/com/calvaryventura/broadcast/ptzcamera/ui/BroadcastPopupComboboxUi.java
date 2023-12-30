@@ -1,93 +1,125 @@
 package com.calvaryventura.broadcast.ptzcamera.ui;
 
 import javax.swing.JComboBox;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.MouseInfo;
 import java.awt.Point;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * Use this class simply to pop up a linear color chooser. This consists of a
- * JSlider with a rainbow background. When the user slides the slider's thumb,
- * we generate a callback for the current color. To use, only implement the
- * constructor, the callback is defined there.
- * TODO
+ * This class shows a simple combobox popup menu.
+ * Options are provided and an optional initial selection may also be specified.
+ * When the user selects an option, the popup closes and the callback is fired.
+ * If the user clicks anywhere outside the popup, no callback is fired and the
+ * popup is closed.
  */
 public class BroadcastPopupComboboxUi
 {
     /**
-     * Create the color chooser slider panel and set its
-     * thumb closest to the specified starting color.
+     * Creates the popup based on the provided selection options.
+     * See documentation {@link BroadcastPopupComboboxUi}.
      *
-     * TODO
+     * @param selectionOptions  options to show in the combobox dropdown
+     * @param initialSelection  option to show selected in the dropdown (or empty)
+     * @param selectionCallback fired when the user clicks one of the options.
      */
-    public BroadcastPopupComboboxUi(List<String> selectionOptions, String initialSelection, Consumer<String> selectionCallback)
+    public static void showPopupSelectionOptions(List<String> selectionOptions, String initialSelection, Consumer<String> selectionCallback)
     {
         // set up the combobox and its text options
         final List<String> options = selectionOptions.stream().map(String::trim).collect(Collectors.toList());
-        final JComboBox<String> combo = new JComboBox<>();
-        combo.setFont(new Font("Arial", Font.BOLD, 24));
-        options.forEach(combo::addItem);
+        final JComboBox<String> comboBox = new JComboBox<>();
+        comboBox.setFont(new Font("Arial", Font.BOLD, 24));
+        options.forEach(comboBox::addItem);
         if (!options.contains(initialSelection.trim()))
         {
-            combo.addItem(initialSelection);
+            comboBox.addItem(initialSelection);
         }
-        combo.setSelectedItem(initialSelection.trim());
+        comboBox.setSelectedItem(initialSelection.trim());
 
         // set up the parent panel for the combobox
-        final JPanel comboPanel = new JPanel();
-        comboPanel.setLayout(new BorderLayout());
-        comboPanel.setBackground(Color.CYAN);
-        comboPanel.setPreferredSize(new Dimension(300, 35));
-        comboPanel.add(combo, BorderLayout.CENTER);
+        final JPanel comboBoxPanel = new JPanel();
+        comboBoxPanel.setLayout(new BorderLayout());
+        comboBoxPanel.setBackground(Color.CYAN);
+        comboBoxPanel.setPreferredSize(new Dimension(300, 45));
+        comboBoxPanel.setBorder(new CompoundBorder(new LineBorder(Color.CYAN, 3), new LineBorder(Color.DARK_GRAY, 5)));
+        comboBoxPanel.add(comboBox, BorderLayout.CENTER);
 
-        // set up the popup
-        final JPopupMenu popup = new JPopupMenu();
-        popup.add(comboPanel, BorderLayout.CENTER);
-        popup.setBorder(new CompoundBorder(new LineBorder(Color.CYAN, 5), new LineBorder(Color.DARK_GRAY, 5)));
-        popup.setBorderPainted(true);
+        // create an UNDECORATED frame to be our popup
+        final JFrame f = new JFrame();
+        f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        f.setAlwaysOnTop(true);
+        final Point p = MouseInfo.getPointerInfo().getLocation();
+        f.setLocation(p.x, p.y);
+        f.setUndecorated(true);
+        f.add(comboBoxPanel);
+        f.pack();
 
         // popup action: fire the callback, delay a little, then hide the popup
-        combo.addActionListener(e -> SwingUtilities.invokeLater(() -> {
-            selectionCallback.accept((String) combo.getSelectedItem());
+        comboBox.addActionListener(e -> SwingUtilities.invokeLater(() -> {
+            selectionCallback.accept((String) comboBox.getSelectedItem());
             try
             {
                 Thread.sleep(250);
             } catch (InterruptedException ignored)
             {
             }
-            popup.setVisible(false);
+            f.setVisible(false);
         }));
 
-        popup.addMouseListener(new MouseAdapter()
+        // when the user clicks anywhere OUTSIDE the popup menu, close the whole frame!
+        // also, after the popup menu initializes, automatically expand the option dropdown
+        comboBox.addFocusListener(new FocusAdapter()
         {
-            public void mousePressed(MouseEvent e)
+            @Override
+            public void focusGained(FocusEvent e)
             {
-                System.out.printf("mouse X=%d, Y=%d\n", e.getX(), e.getY());
-                if (!(e.getX() < popup.getVisibleRect().getMinX()) && !(e.getX() > popup.getVisibleRect().getMaxX()))
-                {
-                    //this.repaint();
+                comboBox.showPopup();
+            }
 
-                }
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                f.setVisible(false);
             }
         });
 
-        // show the popup at the mouse pointer
-        final Point p = MouseInfo.getPointerInfo().getLocation();
-        popup.show(null, p.x, p.y);
+        // if the user cancels the combobox popup menu, just close the whole popup frame
+        comboBox.addPopupMenuListener(new PopupMenuListener()
+        {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+            {
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
+            {
+            }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e)
+            {
+                f.setVisible(false);
+            }
+        });
+
+        // show the popup (does not block)
+        f.setVisible(true);
     }
 
     /**
@@ -98,7 +130,7 @@ public class BroadcastPopupComboboxUi
     public static void main(String[] args)
     {
         final List<String> options = Arrays.asList("one", "two", "three");
-        new BroadcastPopupComboboxUi(options, "four", selection ->
+        BroadcastPopupComboboxUi.showPopupSelectionOptions(options, "four", selection ->
                 System.out.printf("Selected! %s\n", selection));
     }
 }

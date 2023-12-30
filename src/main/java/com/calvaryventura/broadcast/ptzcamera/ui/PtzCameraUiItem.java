@@ -6,7 +6,6 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -14,7 +13,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 /**
- * Structure containing everything for ONE camera preset item.
+ * Structure containing everything for ONE camera-preset item.
  * Each of these items will appear in the {@link PtzCameraUi}.
  */
 public class PtzCameraUiItem extends JPanel implements Serializable
@@ -55,7 +54,9 @@ public class PtzCameraUiItem extends JPanel implements Serializable
         });
 
 
-        // TODO
+        // set up a popup menu that appears and provides default text options,
+        // the popup appears when double-clicking the text field
+        // the callback 'presetNameChangedAction' is automatically fired
         this.textFieldName.addMouseListener(new MouseAdapter()
         {
             @Override
@@ -64,10 +65,10 @@ public class PtzCameraUiItem extends JPanel implements Serializable
                 super.mousePressed(e);
                 if (e.getClickCount() == 2)
                 {
-                    new BroadcastPopupComboboxUi(BroadcastSettings.getInst().getDefaultPresetNames(), textFieldName.getText(), sel -> {
-                        textFieldName.setText(sel);
-                        System.out.printf("selected: %s\n", sel);
-                    });
+                    textFieldName.setSelectionStart(0); // remove any selection highlighting
+                    textFieldName.setSelectionEnd(0);
+                    BroadcastPopupComboboxUi.showPopupSelectionOptions(BroadcastSettings.getInst().getDefaultPresetNames(),
+                            textFieldName.getText(), sel -> textFieldName.setText(sel));
                 }
             }
         });

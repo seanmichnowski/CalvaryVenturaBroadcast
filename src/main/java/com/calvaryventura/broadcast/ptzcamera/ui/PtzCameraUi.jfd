@@ -7,7 +7,7 @@ new FormModel {
 			"$columnSpecs": "0:1.0"
 			"$rowSpecs": "0, 0:1.0, 0:0.1, 0"
 			"$hGap": 7
-			"$vGap": 10
+			"$vGap": 5
 			"$alignTop": true
 			"$alignLeft": true
 		} ) {
@@ -44,8 +44,8 @@ new FormModel {
 			} )
 			add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi" ) {
 				name: "zoomSlider"
-				"minimumSize": new java.awt.Dimension( 300, 50 )
-				"preferredSize": new java.awt.Dimension( 300, 50 )
+				"minimumSize": new java.awt.Dimension( 300, 45 )
+				"preferredSize": new java.awt.Dimension( 300, 45 )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridy": 3
 			} )

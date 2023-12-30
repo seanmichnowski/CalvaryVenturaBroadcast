@@ -15,6 +15,7 @@ import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUiCallbacks;
 import com.calvaryventura.broadcast.switcher.ui.withmultiview.BroadcastSwitcherMultiviewControlPanelUi;
 import com.calvaryventura.broadcast.switcher.ui.withoutmultiview.BroadcastSwitcherControlPanelUi;
+import com.calvaryventura.broadcast.uiwidgets.SplitPaneBarColorizer;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,9 @@ public class BroadcastControlMain extends JFrame
         this.setLocationRelativeTo(null);
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
         this.setVisible(true);
+
+        // add a custom colored UI to the split pane bar instead of the original boring one
+        SplitPaneBarColorizer.setSplitPaneBarStriped(this.parentSplitPane, Color.GREEN);
 
         // initialize LEFT/RIGHT camera command senders
         this.settings = BroadcastSettings.getInst();
@@ -126,6 +130,7 @@ public class BroadcastControlMain extends JFrame
         });
 
         // set up the video switcher control UI implementation
+        logger.info("Starting connection to video switcher, multiview={}", this.settings.isVideoSwitcherMultiviewEnabled() ? "enabled" : "disabled");
         final AbstractBroadcastSwitcherUi videoSwitcherControllerUi = this.settings.isVideoSwitcherMultiviewEnabled()
                 ? new BroadcastSwitcherMultiviewControlPanelUi() : new BroadcastSwitcherControlPanelUi();
         this.switcherControlPanel.add(videoSwitcherControllerUi, BorderLayout.CENTER);
@@ -223,8 +228,11 @@ public class BroadcastControlMain extends JFrame
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
         JPanel panel1 = new JPanel();
+        parentSplitPane = new JSplitPane();
+        JPanel panelTop = new JPanel();
         leftCameraControlPanel = new PtzCameraUi();
         rightCameraControlPanel = new PtzCameraUi();
+        JPanel panel2 = new JPanel();
         switcherControlPanel = new JPanel();
 
         //======== this ========
@@ -244,48 +252,79 @@ public class BroadcastControlMain extends JFrame
             panel1.setBackground(Color.black);
             panel1.setName("panel1");
             panel1.setLayout(new GridBagLayout());
-            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0, 0};
-            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 250, 0};
-            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0, 1.0E-4};
-            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {0.6, 1.0, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0};
+            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0};
+            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {0.6, 1.0E-4};
 
-            //---- leftCameraControlPanel ----
-            leftCameraControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                    new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                new EmptyBorder(0, 5, 5, 5)));
-            leftCameraControlPanel.setPreferredSize(new Dimension(324, 500));
-            leftCameraControlPanel.setMinimumSize(new Dimension(324, 500));
-            leftCameraControlPanel.setName("leftCameraControlPanel");
-            panel1.add(leftCameraControlPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 20, 25), 0, 0));
-
-            //---- rightCameraControlPanel ----
-            rightCameraControlPanel.setBorder(new CompoundBorder(
-                new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                    new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                new EmptyBorder(0, 5, 5, 5)));
-            rightCameraControlPanel.setPreferredSize(new Dimension(324, 500));
-            rightCameraControlPanel.setMinimumSize(new Dimension(324, 500));
-            rightCameraControlPanel.setName("rightCameraControlPanel");
-            panel1.add(rightCameraControlPanel, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 20, 0), 0, 0));
-
-            //======== switcherControlPanel ========
+            //======== parentSplitPane ========
             {
-                switcherControlPanel.setBorder(new CompoundBorder(
-                    new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                        new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                    new EmptyBorder(5, 5, 5, 5)));
-                switcherControlPanel.setOpaque(false);
-                switcherControlPanel.setPreferredSize(new Dimension(24, 200));
-                switcherControlPanel.setMinimumSize(new Dimension(24, 200));
-                switcherControlPanel.setName("switcherControlPanel");
-                switcherControlPanel.setLayout(new BorderLayout());
+                parentSplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+                parentSplitPane.setOpaque(false);
+                parentSplitPane.setResizeWeight(0.5);
+                parentSplitPane.setName("parentSplitPane");
+
+                //======== panelTop ========
+                {
+                    panelTop.setOpaque(false);
+                    panelTop.setBorder(new EmptyBorder(0, 0, 10, 0));
+                    panelTop.setName("panelTop");
+                    panelTop.setLayout(new GridBagLayout());
+                    ((GridBagLayout)panelTop.getLayout()).columnWidths = new int[] {0, 0, 0};
+                    ((GridBagLayout)panelTop.getLayout()).rowHeights = new int[] {0, 0};
+                    ((GridBagLayout)panelTop.getLayout()).columnWeights = new double[] {1.0, 1.0, 1.0E-4};
+                    ((GridBagLayout)panelTop.getLayout()).rowWeights = new double[] {0.6, 1.0E-4};
+
+                    //---- leftCameraControlPanel ----
+                    leftCameraControlPanel.setBorder(new CompoundBorder(
+                        new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                            new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
+                        new EmptyBorder(0, 5, 5, 5)));
+                    leftCameraControlPanel.setPreferredSize(new Dimension(324, 500));
+                    leftCameraControlPanel.setMinimumSize(new Dimension(324, 200));
+                    leftCameraControlPanel.setName("leftCameraControlPanel");
+                    panelTop.add(leftCameraControlPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                        new Insets(0, 0, 0, 25), 0, 0));
+
+                    //---- rightCameraControlPanel ----
+                    rightCameraControlPanel.setBorder(new CompoundBorder(
+                        new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                            new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
+                        new EmptyBorder(0, 5, 5, 5)));
+                    rightCameraControlPanel.setPreferredSize(new Dimension(324, 500));
+                    rightCameraControlPanel.setMinimumSize(new Dimension(324, 200));
+                    rightCameraControlPanel.setName("rightCameraControlPanel");
+                    panelTop.add(rightCameraControlPanel, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                        new Insets(0, 0, 0, 0), 0, 0));
+                }
+                parentSplitPane.setTopComponent(panelTop);
+
+                //======== panel2 ========
+                {
+                    panel2.setOpaque(false);
+                    panel2.setBorder(new EmptyBorder(5, 0, 0, 0));
+                    panel2.setName("panel2");
+                    panel2.setLayout(new BorderLayout());
+
+                    //======== switcherControlPanel ========
+                    {
+                        switcherControlPanel.setBorder(new CompoundBorder(
+                            new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                                new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
+                            new EmptyBorder(5, 5, 5, 5)));
+                        switcherControlPanel.setOpaque(false);
+                        switcherControlPanel.setPreferredSize(new Dimension(24, 200));
+                        switcherControlPanel.setMinimumSize(new Dimension(24, 200));
+                        switcherControlPanel.setName("switcherControlPanel");
+                        switcherControlPanel.setLayout(new BorderLayout());
+                    }
+                    panel2.add(switcherControlPanel, BorderLayout.CENTER);
+                }
+                parentSplitPane.setBottomComponent(panel2);
             }
-            panel1.add(switcherControlPanel, new GridBagConstraints(0, 1, 2, 1, 0.0, 0.0,
+            panel1.add(parentSplitPane, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 0), 0, 0));
         }
@@ -296,6 +335,7 @@ public class BroadcastControlMain extends JFrame
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
+    private JSplitPane parentSplitPane;
     private PtzCameraUi leftCameraControlPanel;
     private PtzCameraUi rightCameraControlPanel;
     private JPanel switcherControlPanel;
