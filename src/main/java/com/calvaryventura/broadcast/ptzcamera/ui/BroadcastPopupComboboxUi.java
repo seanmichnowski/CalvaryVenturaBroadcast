@@ -17,6 +17,7 @@ import java.awt.Point;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -44,6 +45,7 @@ public class BroadcastPopupComboboxUi
         final List<String> options = selectionOptions.stream().map(String::trim).collect(Collectors.toList());
         final JComboBox<String> comboBox = new JComboBox<>();
         comboBox.setFont(new Font("Arial", Font.BOLD, 24));
+        Collections.reverse(options); // add items in reverse since the combobox scrolls DOWN to the latest ones
         options.forEach(comboBox::addItem);
         if (!options.contains(initialSelection.trim()))
         {

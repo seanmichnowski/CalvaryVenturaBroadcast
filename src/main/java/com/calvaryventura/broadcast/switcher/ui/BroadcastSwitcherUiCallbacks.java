@@ -12,6 +12,8 @@ public interface BroadcastSwitcherUiCallbacks
 
     void onFadeToBlack();
 
+    void toggleAudioMuted();
+
     void onLyricsEnabled();
 
     void onFadePressed();

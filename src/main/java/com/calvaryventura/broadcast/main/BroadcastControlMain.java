@@ -58,6 +58,9 @@ public class BroadcastControlMain extends JFrame
         // add a custom colored UI to the split pane bar instead of the original boring one
         SplitPaneBarColorizer.setSplitPaneBarStriped(this.parentSplitPane, Color.GREEN);
 
+        // make all scroll bars wider so they are easier to grab on a touchscreen
+        UIManager.put("ScrollBar.width", 30);
+
         // initialize LEFT/RIGHT camera command senders
         this.settings = BroadcastSettings.getInst();
         this.leftCameraController = new PtzCameraController("LEFT", this.settings.getLeftCameraIp(), 5678);
@@ -158,6 +161,12 @@ public class BroadcastControlMain extends JFrame
             }
 
             @Override
+            public void toggleAudioMuted()
+            {
+                switcherCommandSender.toggleAudioMute();
+            }
+
+            @Override
             public void onLyricsEnabled()
             {
                 lyricsEnabled.set(!lyricsEnabled.get());
@@ -180,6 +189,7 @@ public class BroadcastControlMain extends JFrame
         // connections for the switcher's status to get updated on the UI control panel
         this.switcherCommandSender.addUpstreamKeyOnAirConsumer(videoSwitcherControllerUi::setLyricsStatus);
         this.switcherCommandSender.addFadeToBlackActiveAndTransitionConsumer(videoSwitcherControllerUi::setFadeToBlackStatus);
+        this.switcherCommandSender.addAudioMuteStatusConsumer(videoSwitcherControllerUi::setMuteStatus);
         this.switcherCommandSender.addTransitionInProgressConsumer(videoSwitcherControllerUi::setFadeTransitionInProgressStatus);
         this.switcherCommandSender.addConnectionStatusConsumer(videoSwitcherControllerUi::setSwitcherConnectionStatus);
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> {
@@ -268,6 +278,7 @@ public class BroadcastControlMain extends JFrame
                 {
                     panelTop.setOpaque(false);
                     panelTop.setBorder(new EmptyBorder(0, 0, 10, 0));
+                    panelTop.setPreferredSize(new Dimension(673, 480));
                     panelTop.setName("panelTop");
                     panelTop.setLayout(new GridBagLayout());
                     ((GridBagLayout)panelTop.getLayout()).columnWidths = new int[] {0, 0, 0};

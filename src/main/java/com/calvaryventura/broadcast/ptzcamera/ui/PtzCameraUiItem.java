@@ -7,6 +7,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.Serializable;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.DocumentEvent;
@@ -19,6 +20,7 @@ import javax.swing.event.DocumentListener;
 public class PtzCameraUiItem extends JPanel implements Serializable
 {
     private final int presetIdx;
+    private Runnable presetSetAction;
 
     /**
      * @param presetIdx numerical unique value for this preset (always stays constant regardless of name change)
@@ -68,7 +70,10 @@ public class PtzCameraUiItem extends JPanel implements Serializable
                     textFieldName.setSelectionStart(0); // remove any selection highlighting
                     textFieldName.setSelectionEnd(0);
                     BroadcastPopupComboboxUi.showPopupSelectionOptions(BroadcastSettings.getInst().getDefaultPresetNames(),
-                            textFieldName.getText(), sel -> textFieldName.setText(sel));
+                            textFieldName.getText(), sel -> {
+                                textFieldName.setText(sel); // update the text field with the new selection from the combobox popup
+                                Executors.newSingleThreadExecutor().submit(presetSetAction); // perform the action equivalent to pressing the "SET" button
+                            });
                 }
             }
         });
@@ -83,13 +88,8 @@ public class PtzCameraUiItem extends JPanel implements Serializable
      */
     public void onPresetSetClicked(Runnable presetSetAction)
     {
-        this.buttonSet.addActionListener(e -> {
-            if (JOptionPane.showConfirmDialog(buttonSet, "Confirm setting new camera preset?\nPreset name: " + this.textFieldName.getText().trim(),
-                    "Camera Preset", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION)
-            {
-                presetSetAction.run();
-            }
-        });
+        this.presetSetAction = presetSetAction;
+        this.buttonSet.addActionListener(e -> presetSetAction.run());
     }
 
     /**

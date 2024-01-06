@@ -55,6 +55,13 @@ public class AbstractBroadcastSwitcherUi extends JPanel
     }
 
     /**
+     * @param isMuted indication the master switcher audio is muted
+     */
+    public void setMuteStatus(boolean isMuted)
+    {
+    }
+
+    /**
      * @param active indication the lyrics are displayed on-screen
      */
     public void setLyricsStatus(boolean active)

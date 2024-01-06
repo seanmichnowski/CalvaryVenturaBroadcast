@@ -55,9 +55,11 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             "<li>Clicking the 'Preview' pane performs a fade</li>" +
             "<li>Clicking the 'Program' pane performs a cut</li>" +
             "<li>Single-Clicking any of the input panes puts it into Preview</li>" +
-            "<li>Double-Clicking any of the input panes puts it into Program</li>" +
-            "</ul><br>Double-clicking any camera preset name provides" +
-            "a list of default options you can choose from.<br></html>";
+            "<li>Double-Clicking any of the input panes puts it into Program</li></ul>" +
+            "<br>Double-clicking any camera preset name provides " +
+            "a list of default options you can choose from. " +
+            "When you select one of these, that camera preset is automatically stored, " +
+            "you don't have to click the \"SET\" button after.</html>";
 
     // local vars
     private final BroadcastSettings broadcastSettings;
@@ -80,6 +82,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
 
         // button connections
         this.buttonFadeToBlack.addActionListener(e -> this.callbacks.onFadeToBlack());
+        this.buttonMute.addActionListener(e -> this.callbacks.toggleAudioMuted());
         this.buttonToggleLyrics.addActionListener(e -> this.callbacks.onLyricsEnabled());
         this.buttonCloseHelp.addActionListener(e -> this.dialogHelp.setVisible(false));
         this.buttonhelp.addActionListener(e -> {
@@ -147,7 +150,14 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     }
 
     /**
-     * TODO
+     * Since the video plays in a VLC rendered canvas, we can't control where exactly the video shows up.
+     * All we know is (1) the video player gives the overall WxH of the video (before resizing),
+     * (2) the canvas scales down the video to fully fit either the width or the height dimension, whichever
+     * one is smaller, (3) we know where the mouse clicks happen within the physical bounds of the whole canvas.
+     * From all this, we can calculate the expected bounds of the actual playing video inside the canvas,
+     * after the automatic resizing to fit the canvas. From there we determine which X/Y box the mouse click
+     * occurred, based on the divisions specified in the config file. Then we map an X/Y box to a video source,
+     * and finally perform the appropriate action on that video source/box being selected.
      */
     private void initializeMouseSelectionOnMultiviewPanel(EmbeddedMediaPlayerComponent videoCanvas)
     {
@@ -349,6 +359,15 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     }
 
     /**
+     * @param isMuted indication the master switcher audio is muted
+     */
+    @Override
+    public void setMuteStatus(boolean isMuted)
+    {
+        this.buttonMute.setBackground(isMuted ? Color.RED : Color.DARK_GRAY);
+    }
+
+    /**
      * @param active indication the lyrics are displayed on-screen
      */
     @Override
@@ -387,6 +406,12 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             public void onFadeToBlack()
             {
                 logger.info("Fade to Black");
+            }
+
+            @Override
+            public void toggleAudioMuted()
+            {
+                logger.info("Toggle audio mute");
             }
 
             @Override
@@ -437,6 +462,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         JScrollPane scrollPaneHelp = new JScrollPane();
         textPaneHelp = new JTextPane();
         buttonCloseHelp = new JButton();
+        buttonMute = new JButton();
 
         //======== this ========
         setBackground(Color.black);
@@ -541,7 +567,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         //======== dialogHelp ========
         {
             dialogHelp.setTitle("Broadcast Multiview Instructions");
-            dialogHelp.setPreferredSize(new Dimension(500, 300));
+            dialogHelp.setPreferredSize(new Dimension(550, 300));
             dialogHelp.setAlwaysOnTop(true);
             dialogHelp.setIconImage(new ImageIcon(getClass().getResource("/icons/people_connection_32x32.png")).getImage());
             dialogHelp.setName("dialogHelp");
@@ -599,6 +625,14 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             dialogHelp.pack();
             dialogHelp.setLocationRelativeTo(dialogHelp.getOwner());
         }
+
+        //---- buttonMute ----
+        buttonMute.setText("Mute");
+        buttonMute.setForeground(Color.cyan);
+        buttonMute.setBackground(Color.darkGray);
+        buttonMute.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        buttonMute.setPreferredSize(new Dimension(100, 40));
+        buttonMute.setName("buttonMute");
         // JFormDesigner - End of component initialization  //GEN-END:initComponents  @formatter:on
     }
 
@@ -612,5 +646,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     private JFrame dialogHelp;
     private JTextPane textPaneHelp;
     private JButton buttonCloseHelp;
+    private JButton buttonMute;
     // JFormDesigner - End of variables declaration  //GEN-END:variables  @formatter:on
 }

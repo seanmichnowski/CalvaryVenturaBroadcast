@@ -316,6 +316,7 @@ public class BlackmagicAtemSwitcherPacket
                 ", remoteSeqNumber=" + remoteSequenceNumber +
                 ", localSeqNumber=" + localSequenceNumber +
                 ", payload=" + (payloadStr.length() > 100 ? payloadStr.substring(0, 100) + "..." : payloadStr) +
+                ", payloadStr=" + new String(rawPayloadBytes) +
                 '}';
     }
 }

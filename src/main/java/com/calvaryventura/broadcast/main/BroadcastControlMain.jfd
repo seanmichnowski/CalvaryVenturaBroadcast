@@ -41,6 +41,7 @@ new FormModel {
 						name: "panelTop"
 						"opaque": false
 						"border": new javax.swing.border.EmptyBorder( 0, 0, 10, 0 )
+						"preferredSize": new java.awt.Dimension( 673, 480 )
 						auxiliary() {
 							"JavaCodeGenerator.variableLocal": true
 						}

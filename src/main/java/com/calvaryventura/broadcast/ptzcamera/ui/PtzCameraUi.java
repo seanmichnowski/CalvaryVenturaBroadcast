@@ -26,6 +26,7 @@ public class PtzCameraUi extends JPanel
     private int lastClickedPresetIdx = -1;
     private IPtzCameraUiCallbacks callback;
     private File saveFile;
+    private Color lastBackgroundColor;
 
     // complicated layout descriptor for adding  PTZ camera preset items into their layout panel, but it does make them stack nice and allows vertical space between entries to grow and fill
     private static final GridBagConstraints GRID_BAG_CONSTRAINTS = new GridBagConstraints(0, GridBagConstraints.RELATIVE, 1, NUM_PRESETS,
@@ -51,6 +52,11 @@ public class PtzCameraUi extends JPanel
                 final String originalLabelStatus = this.labelConnectionStatus.getText();
                 this.labelConnectionStatus.setText("<html><font color='white'>Set preset: <u>" + item.getPresetName()
                         + "</u> " + (success ? "OK" : "FAILED") + "</font></html>");
+                if (success)
+                {
+                    // since we updated the "lastClickedPresetIdx," now update that preset's background color, if any
+                    this.setActivePresetBackgroundColor(this.lastBackgroundColor);
+                }
                 final Timer tOriginal = new Timer(0, action -> this.labelConnectionStatus.setText(originalLabelStatus));
                 tOriginal.setInitialDelay(2000);
                 tOriginal.setRepeats(false);
@@ -102,6 +108,7 @@ public class PtzCameraUi extends JPanel
         {
             this.presets.get(this.lastClickedPresetIdx).setContentPanelColor(backgroundColor);
         }
+        this.lastBackgroundColor = backgroundColor;
     }
 
     /**
