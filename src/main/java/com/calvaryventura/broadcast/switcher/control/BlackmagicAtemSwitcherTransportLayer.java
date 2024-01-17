@@ -71,9 +71,6 @@ public class BlackmagicAtemSwitcherTransportLayer
         {
             this.lastReceivedPacketTimeMs = System.currentTimeMillis();
             packet.getPayloadFields().forEach(this.dataFieldAvailableConsumer);
-
-            // TODO
-            logger.info("new packet received: {}", packet);
             if (packet.isFlag0Reliable())
             {
                 this.sendAcknowledgementPacket(packet);

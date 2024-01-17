@@ -1,5 +1,8 @@
 package com.calvaryventura.broadcast.switcher.ui;
 
+import com.calvaryventura.broadcast.settings.BroadcastSettings;
+import com.calvaryventura.broadcast.uiwidgets.PopupVolumeUi;
+
 import javax.swing.JPanel;
 import java.util.Map;
 
@@ -10,8 +13,23 @@ import java.util.Map;
  */
 public class AbstractBroadcastSwitcherUi extends JPanel
 {
+    private final PopupVolumeUi popupVolumeUi = new PopupVolumeUi();
+
     // callbacks for actions the user produces when interacting with the GUI
     protected BroadcastSwitcherUiCallbacks callbacks;
+    protected BroadcastSettings broadcastSettings;
+
+    /**
+     * @param settings general settings for this program
+     */
+    protected AbstractBroadcastSwitcherUi(BroadcastSettings settings)
+    {
+        this.broadcastSettings = settings;
+
+        // initialize the volume meter limits based on settings
+        this.popupVolumeUi.setVolumeMeterLimits(settings.getMinAudioLevelDb(), settings.getWarnAudioLevelDb(),
+                settings.getHighAudioLevelDb(), settings.getMaxAudioLevelDb());
+    }
 
     /**
      * @param callbacks actions the user produces when interacting with the GUI
@@ -19,6 +37,10 @@ public class AbstractBroadcastSwitcherUi extends JPanel
     public void setCallbacks(BroadcastSwitcherUiCallbacks callbacks)
     {
         this.callbacks = callbacks;
+
+        // connect some callbacks to the popup volume meter
+        this.popupVolumeUi.setFaderMovedAction(faderPercent -> this.callbacks.setAudioLevelPercent(faderPercent));
+        this.popupVolumeUi.setPopupShownHiddenAction(isShowing -> this.callbacks.setSwitcherSendingLiveAudio(isShowing));
     }
 
     /**
@@ -47,18 +69,12 @@ public class AbstractBroadcastSwitcherUi extends JPanel
     }
 
     /**
-     * @param active indication the fade to black is active or inactive
-     * @param inTransition indicates we are fading, show the button in yellow
+     * @param leftLevelDb master live audio level LEFT
+     * @param rightLevelDb master live audio level RIGHT
      */
-    public void setFadeToBlackStatus(boolean active, boolean inTransition)
+    public void setLiveAudioLevel(double leftLevelDb, double rightLevelDb)
     {
-    }
-
-    /**
-     * @param isMuted indication the master switcher audio is muted
-     */
-    public void setMuteStatus(boolean isMuted)
-    {
+        this.popupVolumeUi.setLiveVolumeMeterLevel(leftLevelDb, rightLevelDb);
     }
 
     /**
@@ -80,5 +96,13 @@ public class AbstractBroadcastSwitcherUi extends JPanel
      */
     public void setProgramSourceStatus(int programSourceActive)
     {
+    }
+
+    /**
+     * When the "Volume" button is pressed, show the volume popup.
+     */
+    protected void showVolumePopup()
+    {
+        this.popupVolumeUi.showVolumePopup();
     }
 }

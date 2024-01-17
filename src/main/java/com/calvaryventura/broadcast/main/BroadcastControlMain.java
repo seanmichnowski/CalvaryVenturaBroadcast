@@ -49,10 +49,14 @@ public class BroadcastControlMain extends JFrame
      */
     private BroadcastControlMain()
     {
+        // read the settings file
+        this.settings = BroadcastSettings.getInst();
+
         // UI initialization
         this.initComponents();
         this.setLocationRelativeTo(null);
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        this.setTitle(this.settings.getProgramTitle());
         this.setVisible(true);
 
         // add a custom colored UI to the split pane bar instead of the original boring one
@@ -62,7 +66,6 @@ public class BroadcastControlMain extends JFrame
         UIManager.put("ScrollBar.width", 30);
 
         // initialize LEFT/RIGHT camera command senders
-        this.settings = BroadcastSettings.getInst();
         this.leftCameraController = new PtzCameraController("LEFT", this.settings.getLeftCameraIp(), 5678);
         this.rightCameraController = new PtzCameraController("RIGHT", this.settings.getRightCameraIp(), 5678);
         this.leftCameraController.onCameraConnectionStatus(connected -> this.leftCameraControlPanel.setCameraConnectionStatus(connected));
@@ -161,9 +164,15 @@ public class BroadcastControlMain extends JFrame
             }
 
             @Override
-            public void toggleAudioMuted()
+            public void setSwitcherSendingLiveAudio(boolean enable)
             {
-                switcherCommandSender.toggleAudioMute();
+                switcherCommandSender.enableSendingLiveAudioLevels(enable);
+            }
+
+            @Override
+            public void setAudioLevelPercent(double percent0to1)
+            {
+                switcherCommandSender.setMasterAudioLevel(percent0to1);
             }
 
             @Override
@@ -188,8 +197,7 @@ public class BroadcastControlMain extends JFrame
 
         // connections for the switcher's status to get updated on the UI control panel
         this.switcherCommandSender.addUpstreamKeyOnAirConsumer(videoSwitcherControllerUi::setLyricsStatus);
-        this.switcherCommandSender.addFadeToBlackActiveAndTransitionConsumer(videoSwitcherControllerUi::setFadeToBlackStatus);
-        this.switcherCommandSender.addAudioMuteStatusConsumer(videoSwitcherControllerUi::setMuteStatus);
+        this.switcherCommandSender.addLiveAudioLevelDbConsumer(videoSwitcherControllerUi::setLiveAudioLevel);
         this.switcherCommandSender.addTransitionInProgressConsumer(videoSwitcherControllerUi::setFadeTransitionInProgressStatus);
         this.switcherCommandSender.addConnectionStatusConsumer(videoSwitcherControllerUi::setSwitcherConnectionStatus);
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> {
@@ -208,7 +216,7 @@ public class BroadcastControlMain extends JFrame
         this.leftCameraControlPanel.loadPresetsSavedToDisk();
         this.rightCameraControlPanel.loadPresetsSavedToDisk();
 
-        // after all the UI initialization is done, finally start the connection to the switcher
+        // after UI initialization is done, finally start the connection to the switcher
         this.switcherCommandSender.initialize(settings.getSwitcherIp());
     }
 
@@ -246,7 +254,7 @@ public class BroadcastControlMain extends JFrame
         switcherControlPanel = new JPanel();
 
         //======== this ========
-        setTitle("Calvary Ventura Camera Control");
+        setTitle("Default Title Overwritten by Config File");
         setFont(new Font(Font.DIALOG, Font.PLAIN, 14));
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setBackground(Color.black);

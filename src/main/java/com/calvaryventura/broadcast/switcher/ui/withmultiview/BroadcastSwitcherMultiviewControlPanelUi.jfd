@@ -70,12 +70,13 @@ new FormModel {
 						"font": &Font0 new java.awt.Font( "Segoe UI", 1, 20 )
 					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 					add( new FormComponent( "javax.swing.JButton" ) {
-						name: "buttonFadeToBlack"
-						"text": "Fade to Black"
+						name: "buttonVolume"
+						"text": "Volume"
 						"foreground": sfield java.awt.Color cyan
 						"background": sfield java.awt.Color darkGray
 						"font": #Font0
-						"preferredSize": new java.awt.Dimension( 200, 40 )
+						"preferredSize": new java.awt.Dimension( 120, 40 )
+						"minimumSize": new java.awt.Dimension( 120, 30 )
 					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 						"gridx": 1
 					} )
@@ -156,17 +157,6 @@ new FormModel {
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 70, 260 )
 			"size": new java.awt.Dimension( 490, 330 )
-		} )
-		add( new FormComponent( "javax.swing.JButton" ) {
-			name: "buttonMute"
-			"text": "Mute"
-			"foreground": sfield java.awt.Color cyan
-			"background": sfield java.awt.Color darkGray
-			"font": #Font0
-			"preferredSize": new java.awt.Dimension( 100, 40 )
-		}, new FormLayoutConstraints( null ) {
-			"location": new java.awt.Point( 670, 260 )
-			"size": new java.awt.Dimension( 101, 40 )
 		} )
 	}
 }

@@ -12,7 +12,9 @@ public interface BroadcastSwitcherUiCallbacks
 
     void onFadeToBlack();
 
-    void toggleAudioMuted();
+    void setSwitcherSendingLiveAudio(boolean enable);
+
+    void setAudioLevelPercent(double percent0to1);
 
     void onLyricsEnabled();
 

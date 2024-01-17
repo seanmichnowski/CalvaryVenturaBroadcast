@@ -1,5 +1,6 @@
 package com.calvaryventura.broadcast.switcher.ui.withoutmultiview;
 
+import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
 import com.calvaryventura.broadcast.uiwidgets.VerticalLabelUI;
 
@@ -40,6 +41,7 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
      */
     public BroadcastSwitcherControlPanelUi()
     {
+        super(BroadcastSettings.getInst());
         this.initComponents();
         this.buttonToggleLyrics.addActionListener(e -> {
             this.lyricsOnStatus = !this.lyricsOnStatus;

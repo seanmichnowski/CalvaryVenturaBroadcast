@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.ptzcamera.ui;
+package com.calvaryventura.broadcast.uiwidgets;
 
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -29,11 +29,11 @@ import java.util.stream.Collectors;
  * If the user clicks anywhere outside the popup, no callback is fired and the
  * popup is closed.
  */
-public class BroadcastPopupComboboxUi
+public class PopupComboboxUi
 {
     /**
      * Creates the popup based on the provided selection options.
-     * See documentation {@link BroadcastPopupComboboxUi}.
+     * See documentation {@link PopupComboboxUi}.
      *
      * @param selectionOptions  options to show in the combobox dropdown
      * @param initialSelection  option to show selected in the dropdown (or empty)
@@ -132,7 +132,7 @@ public class BroadcastPopupComboboxUi
     public static void main(String[] args)
     {
         final List<String> options = Arrays.asList("one", "two", "three");
-        BroadcastPopupComboboxUi.showPopupSelectionOptions(options, "four", selection ->
+        PopupComboboxUi.showPopupSelectionOptions(options, "four", selection ->
                 System.out.printf("Selected! %s\n", selection));
     }
 }

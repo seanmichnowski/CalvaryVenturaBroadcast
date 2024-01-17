@@ -1,6 +1,7 @@
 package com.calvaryventura.broadcast.ptzcamera.ui;
 
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
+import com.calvaryventura.broadcast.uiwidgets.PopupComboboxUi;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -69,7 +70,7 @@ public class PtzCameraUiItem extends JPanel implements Serializable
                 {
                     textFieldName.setSelectionStart(0); // remove any selection highlighting
                     textFieldName.setSelectionEnd(0);
-                    BroadcastPopupComboboxUi.showPopupSelectionOptions(BroadcastSettings.getInst().getDefaultPresetNames(),
+                    PopupComboboxUi.showPopupSelectionOptions(BroadcastSettings.getInst().getDefaultPresetNames(),
                             textFieldName.getText(), sel -> {
                                 textFieldName.setText(sel); // update the text field with the new selection from the combobox popup
                                 Executors.newSingleThreadExecutor().submit(presetSetAction); // perform the action equivalent to pressing the "SET" button

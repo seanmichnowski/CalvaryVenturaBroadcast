@@ -24,6 +24,7 @@ public class BroadcastSettings
     private static final BroadcastSettings INSTANCE = new BroadcastSettings();
 
     // settings
+    private String programTitle;
     private String leftCameraIp;
     private String rightCameraIp;
     private String switcherIp;
@@ -37,6 +38,10 @@ public class BroadcastSettings
     private List<Point> videoSwitcherMultiviewProgramPaneGridBoxes;
     private List<Point> videoSwitcherMultiviewInputsGridBoxes;
     private String videoSwitcherMultiviewVlcMediaPath;
+    private int minAudioLevelDb;
+    private int warnAudioLevelDb;
+    private int highAudioLevelDb;
+    private int maxAudioLevelDb;
 
     /**
      * Global static method for getting the broadcast settings from anywhere.
@@ -71,6 +76,10 @@ public class BroadcastSettings
                 }
             }
             in.close();
+
+            // program title
+            this.programTitle = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("programTitle"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'programTitle' in settings file"))[1].trim();
 
             // left camera IP
             this.leftCameraIp = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("leftCameraIp"))
@@ -144,6 +153,16 @@ public class BroadcastSettings
             // multiview display
             this.videoSwitcherMultiviewVlcMediaPath= lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("videoSwitcherMultiviewVlcMediaPath"))
                     .findFirst().orElseThrow(() -> new RuntimeException("Cannot find multiview parameter in settings file"))[1].trim();
+
+            // audio
+            this.minAudioLevelDb = Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("minAudioLevelDb"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find minimum audio level in settings file"))[1].trim());
+            this.warnAudioLevelDb = Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("warnAudioLevelDb"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find warning audio level in settings file"))[1].trim());
+            this.highAudioLevelDb = Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("highAudioLevelDb"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find high audio level in settings file"))[1].trim());
+            this.maxAudioLevelDb = Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("maxAudioLevelDb"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find maximum audio level in settings file"))[1].trim());
         } catch (Exception e)
         {
             // don't proceed since we can't load settings
@@ -152,6 +171,14 @@ public class BroadcastSettings
                     "Unable to load settings file from JAR", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
         }
+    }
+
+    /**
+     * @return name of the program to show in the parent frame
+     */
+    public String getProgramTitle()
+    {
+        return programTitle;
     }
 
     /**
@@ -247,5 +274,25 @@ public class BroadcastSettings
     public String getVideoSwitcherMultiviewVlcMediaPath()
     {
         return videoSwitcherMultiviewVlcMediaPath;
+    }
+
+    public int getMinAudioLevelDb()
+    {
+        return minAudioLevelDb;
+    }
+
+    public int getWarnAudioLevelDb()
+    {
+        return warnAudioLevelDb;
+    }
+
+    public int getHighAudioLevelDb()
+    {
+        return highAudioLevelDb;
+    }
+
+    public int getMaxAudioLevelDb()
+    {
+        return maxAudioLevelDb;
     }
 }

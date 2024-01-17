@@ -105,7 +105,6 @@ public class BlackmagicAtemSwitcherNetworkLayer
      */
     public void sendBlocking(BlackmagicAtemSwitcherPacket packet) throws Exception
     {
-        logger.info("Sending packet: {}", packet);
         this.transmitPacket.setData(packet.getFullPacketBytes());
         this.txRxSocket.send(this.transmitPacket); // TODO https://www.baeldung.com/java-nio-datagramchannel start here
     }

@@ -29,8 +29,6 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Map;
@@ -45,8 +43,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
 {
     // VLC macros
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final String VLC_INSTALLATION_NAME = "vlc";
-    private static final int VLC_MINIMUM_VERSION = 3;
     private static final String VLC_NOT_INSTALLED_ERROR_MSG = "<html>You must install the program 'VLC' in order" +
             "<br>to view the multiview screen in real-time.<br>See: <u>https://www.videolan.org/vlc/#download</u></html>";
 
@@ -62,7 +58,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             "you don't have to click the \"SET\" button after.</html>";
 
     // local vars
-    private final BroadcastSettings broadcastSettings;
     private final EmbeddedMediaPlayer player;
     private final Rectangle videoPlaybackRectangleWithinVideoCanvas = new Rectangle();
 
@@ -72,8 +67,8 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     public BroadcastSwitcherMultiviewControlPanelUi()
     {
         // initialization
+        super(BroadcastSettings.getInst());
         this.initComponents();
-        this.broadcastSettings = BroadcastSettings.getInst();
 
         // set the help JTextPane to honor it's JFormDesigner font settings, and provide the text
         this.textPaneHelp.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
@@ -81,8 +76,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         new DragScrollListener(this.textPaneHelp); // enable iPhone-like scrolling
 
         // button connections
-        this.buttonFadeToBlack.addActionListener(e -> this.callbacks.onFadeToBlack());
-        this.buttonMute.addActionListener(e -> this.callbacks.toggleAudioMuted());
+        this.buttonVolume.addActionListener(e -> super.showVolumePopup());
         this.buttonToggleLyrics.addActionListener(e -> this.callbacks.onLyricsEnabled());
         this.buttonCloseHelp.addActionListener(e -> this.dialogHelp.setVisible(false));
         this.buttonhelp.addActionListener(e -> {
@@ -95,7 +89,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         this.player = videoCanvas.mediaPlayer();
 
         // ensure we have VLC before attempting to start playback, otherwise show an error
-        if (true) // TODO verifyVlcInstallationOnHostComputer())
+        if (true) // TODO can the 'videoCanvas' above be used to determine whether VLC is installed??
         {
             this.panelVideo.add(videoCanvas, BorderLayout.CENTER);
             this.initializeMouseSelectionOnMultiviewPanel(videoCanvas);
@@ -106,46 +100,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             errorMessage.setForeground(Color.RED);
             errorMessage.setFont(new Font("Arial", Font.BOLD, 20));
             this.panelVideo.add(errorMessage, BorderLayout.CENTER);
-        }
-    }
-
-    /**
-     * Checks the current VLC installation and verifies a correct minimum version.
-     * See local static variables for minimum version and installation location.
-     *
-     * @return indication if VLC is installed AND we have at least the minimum version.
-     */
-    private static boolean verifyVlcInstallationOnHostComputer()
-    {
-        try
-        {
-            // get the vlc version by invoking the program
-            final Process process = Runtime.getRuntime().exec(VLC_INSTALLATION_NAME + " --version");
-            try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream())))
-            {
-                // pull the version from the command's output, example: "VLC version 3.0.8 Vetinari (3.0.8-0-gf350b6b5a7)"
-                final String versionStr = in.lines()
-                        .filter(l -> l.toLowerCase().contains("version")).findFirst()
-                        .orElseThrow(() -> new RuntimeException("Cannot find the version of VLC installation '" + VLC_INSTALLATION_NAME + "'. Check path or installation."));
-
-                // for the input string seen above, this would return "3.0.8" as vlcVersion, start and end being 4 and 5 respectively
-                final int versionStrIdxStart = versionStr.indexOf("version");
-                final int versionStrIdxEnd = versionStr.substring(versionStrIdxStart + 8).indexOf(" ");
-                final String vlcVersion = versionStr.substring(versionStrIdxStart + 8, versionStrIdxStart + 8 + versionStrIdxEnd);
-
-                // ensure the version of VLC is at least the minimum version
-                final boolean pass = Integer.parseInt(vlcVersion.substring(0, 1)) >= VLC_MINIMUM_VERSION;
-                logger.info("Installed VLC version: {}... {} (>={})", vlcVersion, pass ? "OK" : "FAIL", VLC_MINIMUM_VERSION);
-                if (!pass)
-                {
-                    logger.info("VLC is installed, but we require at least version {} or higher", VLC_MINIMUM_VERSION);
-                }
-                return pass;
-            }
-        } catch (Exception e)
-        {
-            logger.error("Unable to lookup valid VLC installation on host computer", e);
-            return false;
         }
     }
 
@@ -255,6 +209,22 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                                     videoCanvasRectangleResized(videoPlaybackDimensions, videoCanvas.getSize());
                                 }
                             });
+
+                            // TODO added ..... but why is it always 0 now????
+                            // I'd like to be able to automatically set the panel size based on the incoming aspect ratio...
+                            // also try better media streaming...
+                            // https://stackoverflow.com/questions/71304226/how-to-receive-mpegts-multicast-steam-on-vlc
+                            // DJ is right, latency is going to be dependent on nearly everything. However, I am finding that latency of some formats can be reduced to unnoticable levels, "unnoticable" being roughly 100-200ms. I am having good luck with MPEG-2 TS via UDP multicast with encoding rates ~3-4K.
+                            //However, I am not having much luck with MPEG-4 via RTSP. I can get latency down to 500-600ms by hammering on caching values, but after a day of poking at settings I am unable to do much better than that on either OS X or XP. There is a cache somewhere in the process that either I have missed, or can't be reduced through the GUI or command line.
+                            // TODO add buttons for setting AUX source and also maybe a fade transition T-bar
+                            System.out.printf("\n\nPlayback dims: %s\n", videoPlaybackDimensions.toString());
+                            int width = videoCanvas.getWidth();
+                            final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
+                            int proposedHeight = (int) (width / aspectRatioVideo);
+                            System.out.printf("Current canvas width: %dpix, aspect ratio video: %f, new proposed canvas height=%dpix\n", width, aspectRatioVideo, proposedHeight);
+                            videoCanvas.setSize(width, proposedHeight);
+                            videoCanvas.setPreferredSize(new Dimension(width, proposedHeight));
+                            panelVideo.revalidate();
                         }
                     }
                 });
@@ -290,6 +260,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         // aspect ratio is the width divided by the height, find for both the parent canvas and the playing video
         final double aspectRatioCanvas = videoCanvasSize.getWidth() / videoCanvasSize.getHeight();
         final double aspectRatioVideo = videoPlaybackSize.getWidth() / videoPlaybackSize.getHeight();
+        logger.info("Aspect ratio of playing multiview video: {}", aspectRatioVideo);
 
         // compare the aspect ratios
         final double width;
@@ -349,25 +320,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     }
 
     /**
-     * @param active       indication the fade to black is active or inactive
-     * @param inTransition indicates we are fading, show the button in yellow
-     */
-    @Override
-    public void setFadeToBlackStatus(boolean active, boolean inTransition)
-    {
-        this.buttonFadeToBlack.setBackground(inTransition ? Color.YELLOW : active ? Color.RED : Color.DARK_GRAY);
-    }
-
-    /**
-     * @param isMuted indication the master switcher audio is muted
-     */
-    @Override
-    public void setMuteStatus(boolean isMuted)
-    {
-        this.buttonMute.setBackground(isMuted ? Color.RED : Color.DARK_GRAY);
-    }
-
-    /**
      * @param active indication the lyrics are displayed on-screen
      */
     @Override
@@ -409,9 +361,15 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             }
 
             @Override
-            public void toggleAudioMuted()
+            public void setSwitcherSendingLiveAudio(boolean enable)
             {
-                logger.info("Toggle audio mute");
+                logger.info("Switcher sends live audio levels: {}", enable);
+            }
+
+            @Override
+            public void setAudioLevelPercent(double percent0to1)
+            {
+                logger.info("Audio level commanded: {}%", percent0to1);
             }
 
             @Override
@@ -455,14 +413,13 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         labelTransitionInProgress = new JLabel();
         labelConnectionStatus = new JLabel();
         buttonToggleLyrics = new JButton();
-        buttonFadeToBlack = new JButton();
+        buttonVolume = new JButton();
         buttonhelp = new JButton();
         dialogHelp = new JFrame();
         JPanel panelHelpContents = new JPanel();
         JScrollPane scrollPaneHelp = new JScrollPane();
         textPaneHelp = new JTextPane();
         buttonCloseHelp = new JButton();
-        buttonMute = new JButton();
 
         //======== this ========
         setBackground(Color.black);
@@ -535,14 +492,15 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                     new Insets(0, 0, 0, 20), 0, 0));
 
-                //---- buttonFadeToBlack ----
-                buttonFadeToBlack.setText("Fade to Black");
-                buttonFadeToBlack.setForeground(Color.cyan);
-                buttonFadeToBlack.setBackground(Color.darkGray);
-                buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 20));
-                buttonFadeToBlack.setPreferredSize(new Dimension(200, 40));
-                buttonFadeToBlack.setName("buttonFadeToBlack");
-                panel1.add(buttonFadeToBlack, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+                //---- buttonVolume ----
+                buttonVolume.setText("Volume");
+                buttonVolume.setForeground(Color.cyan);
+                buttonVolume.setBackground(Color.darkGray);
+                buttonVolume.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                buttonVolume.setPreferredSize(new Dimension(120, 40));
+                buttonVolume.setMinimumSize(new Dimension(120, 30));
+                buttonVolume.setName("buttonVolume");
+                panel1.add(buttonVolume, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                     new Insets(0, 0, 0, 20), 0, 0));
 
@@ -625,14 +583,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             dialogHelp.pack();
             dialogHelp.setLocationRelativeTo(dialogHelp.getOwner());
         }
-
-        //---- buttonMute ----
-        buttonMute.setText("Mute");
-        buttonMute.setForeground(Color.cyan);
-        buttonMute.setBackground(Color.darkGray);
-        buttonMute.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        buttonMute.setPreferredSize(new Dimension(100, 40));
-        buttonMute.setName("buttonMute");
         // JFormDesigner - End of component initialization  //GEN-END:initComponents  @formatter:on
     }
 
@@ -641,11 +591,10 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     private JLabel labelTransitionInProgress;
     private JLabel labelConnectionStatus;
     private JButton buttonToggleLyrics;
-    private JButton buttonFadeToBlack;
+    private JButton buttonVolume;
     private JButton buttonhelp;
     private JFrame dialogHelp;
     private JTextPane textPaneHelp;
     private JButton buttonCloseHelp;
-    private JButton buttonMute;
     // JFormDesigner - End of variables declaration  //GEN-END:variables  @formatter:on
 }

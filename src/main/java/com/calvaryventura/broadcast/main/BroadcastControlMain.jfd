@@ -5,7 +5,7 @@ new FormModel {
 	root: new FormRoot {
 		add( new FormWindow( "javax.swing.JFrame", new FormLayoutManager( class java.awt.BorderLayout ) ) {
 			name: "this"
-			"title": "Calvary Ventura Camera Control"
+			"title": "Default Title Overwritten by Config File"
 			"font": new java.awt.Font( "Dialog", 0, 14 )
 			"defaultCloseOperation": 3
 			"background": sfield java.awt.Color black
