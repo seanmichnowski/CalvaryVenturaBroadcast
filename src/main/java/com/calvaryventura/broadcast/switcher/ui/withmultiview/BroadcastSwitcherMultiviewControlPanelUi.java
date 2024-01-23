@@ -11,9 +11,6 @@ import com.calvaryventura.broadcast.uiwidgets.DragScrollListener;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.caprica.vlcj.media.Media;
-import uk.co.caprica.vlcj.media.MediaEventAdapter;
-import uk.co.caprica.vlcj.media.MediaParsedStatus;
 import uk.co.caprica.vlcj.player.component.EmbeddedMediaPlayerComponent;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
 
@@ -32,6 +29,8 @@ import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 /**
@@ -43,6 +42,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
 {
     // VLC macros
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private static final String[] VLC_PLAYBACK_FLAGS = {"--drop-late-frames", "--skip-frames", "--network-caching=500", "--sub-track=0"};
     private static final String VLC_NOT_INSTALLED_ERROR_MSG = "<html>You must install the program 'VLC' in order" +
             "<br>to view the multiview screen in real-time.<br>See: <u>https://www.videolan.org/vlc/#download</u></html>";
 
@@ -58,7 +58,8 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             "you don't have to click the \"SET\" button after.</html>";
 
     // local vars
-    private final EmbeddedMediaPlayer player;
+    private EmbeddedMediaPlayerComponent videoCanvas; // per "https://github.com/caprica/vlcj" declare as a class var so garbage collection doesn't delete stuff inside
+    private EmbeddedMediaPlayer player;               // per "https://github.com/caprica/vlcj" declare as a class var so garbage collection doesn't delete stuff inside
     private final Rectangle videoPlaybackRectangleWithinVideoCanvas = new Rectangle();
 
     /**
@@ -67,7 +68,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     public BroadcastSwitcherMultiviewControlPanelUi()
     {
         // initialization
-        super(BroadcastSettings.getInst());
+        super();
         this.initComponents();
 
         // set the help JTextPane to honor it's JFormDesigner font settings, and provide the text
@@ -84,23 +85,60 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             this.dialogHelp.setVisible(true);
         });
 
-        // create the video player
-        final EmbeddedMediaPlayerComponent videoCanvas = new EmbeddedMediaPlayerComponent();
-        this.player = videoCanvas.mediaPlayer();
-
-        // ensure we have VLC before attempting to start playback, otherwise show an error
-        if (true) // TODO can the 'videoCanvas' above be used to determine whether VLC is installed??
+        // attempt to initialize the VLC media player library
+        try
         {
-            this.panelVideo.add(videoCanvas, BorderLayout.CENTER);
-            this.initializeMouseSelectionOnMultiviewPanel(videoCanvas);
-            this.initializeVlcPlayback(videoCanvas);
+            this.videoCanvas = new EmbeddedMediaPlayerComponent(VLC_PLAYBACK_FLAGS);
+            this.player = videoCanvas.mediaPlayer();
+        } catch (Throwable ignored)
+        {
+            // VLC is probably not installed
+            this.videoCanvas = null;
+            this.player = null;
+        }
+
+        // if the VLC initialization succeeded, then add the video canvas to our program
+        if (this.player != null)
+        {
+            this.initializeMouseSelectionOnMultiviewPanel(this.videoCanvas);
+            this.initializeVlcPlayback(this.videoCanvas);
+            this.panelVideoMultiview.add(this.videoCanvas); // GridBagLayout
         } else
         {
+            // no VLC installed!
             final JLabel errorMessage = new JLabel(VLC_NOT_INSTALLED_ERROR_MSG);
             errorMessage.setForeground(Color.RED);
             errorMessage.setFont(new Font("Arial", Font.BOLD, 20));
-            this.panelVideo.add(errorMessage, BorderLayout.CENTER);
+            this.panelVideoMultiview.add(errorMessage); // GridBagLayout
         }
+
+/*
+        this.panelVideoMultiview.addComponentListener(new ComponentAdapter()
+        {
+            @Override
+            public void componentResized(ComponentEvent e)
+            {
+                System.out.printf("REsized\n");
+                super.componentResized(e);
+
+                // TODO kind of....
+
+                    // TODO maybe I need to listen for ancestor listener on the parent and NOT the video canvas!!!
+                    logger.info("VIDEO COMPONENT SHOWN!");
+                    final Dimension videoPlaybackDimensions = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
+                    final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
+                    int width = panelVideoMultiview.getWidth();
+                    int proposedHeight = (int) (width / aspectRatioVideo);
+                    System.out.printf("Current canvas width: %dpix, aspect ratio video: %f, new proposed canvas height=%dpix\n", width, aspectRatioVideo, proposedHeight);
+                    //panelVideoMultiview.setSize(width, proposedHeight);
+                    videoCanvas.setPreferredSize(new Dimension(width, proposedHeight));
+                panelVideoMultiview.setBackground(new Color((int) (Math.random() * 100), 100, 100));
+                panelVideoMultiview.setOpaque(true);
+                panelVideoMultiview.revalidate(); // TODO progress but not fully.....
+            }
+        });
+ */
+
     }
 
     /**
@@ -130,30 +168,29 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                 if (xPercent < 0 || xPercent > 1.0 || yPercent < 0 || yPercent > 1.0)
                 {
                     // the mouse press lies outside the inscribed rectangle
-                    logger.info("OUTSIDE!!!!"); // TODO removeme
                     return;
                 }
 
                 // based on the mouse percent INTO the playing video's rectangle, determine which grid box WITHIN the video we clicked inside (starts at 0 for X and Y and referenced from the upper-left corner)
-                final int xGridBoxMouseLoc = (int) (xPercent * broadcastSettings.getVideoSwitcherMultiviewNumColumnDivisions());
-                final int yGridBoxMouseLoc = (int) (yPercent * broadcastSettings.getVideoSwitcherMultiviewNumRowDivisions());
+                final int xGridBoxMouseLoc = (int) (xPercent * settings.getVideoSwitcherMultiviewNumColumnDivisions());
+                final int yGridBoxMouseLoc = (int) (yPercent * settings.getVideoSwitcherMultiviewNumRowDivisions());
                 final Point mouseClickGridBox = new Point(xGridBoxMouseLoc, yGridBoxMouseLoc);
 
                 // find which multiview pane the user is clicking inside
-                if (e.getClickCount() == 1 && broadcastSettings.getVideoSwitcherMultiviewPreviewPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
+                if (e.getClickCount() == 1 && settings.getVideoSwitcherMultiviewPreviewPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
                 {
                     callbacks.onFadePressed(); // pressing in the "PREVIEW" pane triggers a fade transition
-                } else if (e.getClickCount() == 1 && broadcastSettings.getVideoSwitcherMultiviewProgramPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
+                } else if (e.getClickCount() == 1 && settings.getVideoSwitcherMultiviewProgramPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
                 {
                     callbacks.onCutPressed(); // pressing in the "PROGRAM" pane triggers a cut transition
                 } else
                 {
-                    IntStream.range(0, broadcastSettings.getVideoSwitcherMultiviewInputsGridBoxes().size()).boxed()
-                            .filter(inputIdx -> broadcastSettings.getVideoSwitcherMultiviewInputsGridBoxes().get(inputIdx).equals(mouseClickGridBox))
+                    IntStream.range(0, settings.getVideoSwitcherMultiviewInputsGridBoxes().size()).boxed()
+                            .filter(inputIdx -> settings.getVideoSwitcherMultiviewInputsGridBoxes().get(inputIdx).equals(mouseClickGridBox))
                             .findFirst().ifPresent(gridBoxIdx ->
                             {
                                 // map the index of the source grid box to the ACTUAL HDMI input and HDMI name for the switcher's input channel
-                                final Map<String, Integer> switcherVideoNamesAndIndexes = broadcastSettings.getSwitcherVideoNamesAndIndexes();
+                                final Map<String, Integer> switcherVideoNamesAndIndexes = settings.getSwitcherVideoNamesAndIndexes();
                                 final int switcherSourceIdx = new ArrayList<>(switcherVideoNamesAndIndexes.values()).get(gridBoxIdx);
                                 final String switcherSourceName = new ArrayList<>(switcherVideoNamesAndIndexes.keySet()).get(gridBoxIdx);
                                 if (e.getClickCount() == 1)
@@ -186,48 +223,30 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             @Override
             public void ancestorAdded(AncestorEvent event)
             {
-                // after the video canvas is showing, we can begin playback
-                player.media().play(broadcastSettings.getVideoSwitcherMultiviewVlcMediaPath());
-
-                // add a listener, so that after the media begins to play, we get the pixel boundaries of the media surface
-                player.media().events().addMediaEventListener(new MediaEventAdapter()
+                // whenever the video playback canvas changes size, update the processing to find the boundaries of the video
+                videoCanvas.addComponentListener(new ComponentAdapter()
                 {
                     @Override
-                    public void mediaParsedChanged(Media media, MediaParsedStatus mediaParsedStatus)
+                    public void componentResized(ComponentEvent e)
                     {
-                        final Dimension videoPlaybackDimensions = player.video().videoDimension();
-                        if (videoPlaybackDimensions != null)
-                        {
-                            // whenever the video playback canvas changes size, update the processing to find the boundaries of the video
-                            videoCanvasRectangleResized(videoPlaybackDimensions, videoCanvas.getSize());
-                            videoCanvas.addComponentListener(new ComponentAdapter()
-                            {
-                                @Override
-                                public void componentResized(ComponentEvent e)
-                                {
-                                    super.componentResized(e);
-                                    videoCanvasRectangleResized(videoPlaybackDimensions, videoCanvas.getSize());
-                                }
-                            });
-
-                            // TODO added ..... but why is it always 0 now????
-                            // I'd like to be able to automatically set the panel size based on the incoming aspect ratio...
-                            // also try better media streaming...
-                            // https://stackoverflow.com/questions/71304226/how-to-receive-mpegts-multicast-steam-on-vlc
-                            // DJ is right, latency is going to be dependent on nearly everything. However, I am finding that latency of some formats can be reduced to unnoticable levels, "unnoticable" being roughly 100-200ms. I am having good luck with MPEG-2 TS via UDP multicast with encoding rates ~3-4K.
-                            //However, I am not having much luck with MPEG-4 via RTSP. I can get latency down to 500-600ms by hammering on caching values, but after a day of poking at settings I am unable to do much better than that on either OS X or XP. There is a cache somewhere in the process that either I have missed, or can't be reduced through the GUI or command line.
-                            // TODO add buttons for setting AUX source and also maybe a fade transition T-bar
-                            System.out.printf("\n\nPlayback dims: %s\n", videoPlaybackDimensions.toString());
-                            int width = videoCanvas.getWidth();
-                            final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
-                            int proposedHeight = (int) (width / aspectRatioVideo);
-                            System.out.printf("Current canvas width: %dpix, aspect ratio video: %f, new proposed canvas height=%dpix\n", width, aspectRatioVideo, proposedHeight);
-                            videoCanvas.setSize(width, proposedHeight);
-                            videoCanvas.setPreferredSize(new Dimension(width, proposedHeight));
-                            panelVideo.revalidate();
-                        }
+                        super.componentResized(e);
+                        videoCanvasRectangleResized(e.getComponent().getSize());
                     }
                 });
+
+                // after the video canvas is showing, we can begin playback
+                player.media().play(settings.getVideoSwitcherMultiviewVlcMediaPath());
+
+
+/*
+                // I'd like to be able to automatically set the panel size based on the incoming aspect ratio...
+                // TODO try better media streaming...
+                // https://stackoverflow.com/questions/71304226/how-to-receive-mpegts-multicast-steam-on-vlc
+                // DJ is right, latency is going to be dependent on nearly everything. However, I am finding that latency of some formats can be reduced to unnoticable levels, "unnoticable" being roughly 100-200ms. I am having good luck with MPEG-2 TS via UDP multicast with encoding rates ~3-4K.
+                //However, I am not having much luck with MPEG-4 via RTSP. I can get latency down to 500-600ms by hammering on caching values, but after a day of poking at settings I am unable to do much better than that on either OS X or XP. There is a cache somewhere in the process that either I have missed, or can't be reduced through the GUI or command line.
+                // TODO add buttons for setting AUX source and also maybe a fade transition T-bar
+                // TODO also need to make the volume popup modal? so that clicking anywhere outside it doesn't activate a real click outside the volume popup
+ */
             }
 
             @Override
@@ -252,15 +271,17 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
      * We might be a pixel or two off on the edges, but that's OK since we use the rectangle to register mouse events
      * and determine WHERE in the playing video we are clicking.
      *
-     * @param videoPlaybackSize this is the actual size of the playing video and NEVER changes (for example, WxH 480x360 or 1920x1080 etc.)
-     * @param videoCanvasSize   this is the size of the canvas playing the actual video and WILL change as the parent program is resized
+     * @param videoCanvasSize this is the size of the canvas playing the actual video and WILL change as the parent program is resized
      */
-    private void videoCanvasRectangleResized(Dimension videoPlaybackSize, Dimension videoCanvasSize)
+    private void videoCanvasRectangleResized(Dimension videoCanvasSize)
     {
+        // the actual size of the playing video and NEVER changes (for example, WxH 480x360 or 1920x1080 etc.)
+        final Dimension videoPlaybackSize = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
+
         // aspect ratio is the width divided by the height, find for both the parent canvas and the playing video
         final double aspectRatioCanvas = videoCanvasSize.getWidth() / videoCanvasSize.getHeight();
         final double aspectRatioVideo = videoPlaybackSize.getWidth() / videoPlaybackSize.getHeight();
-        logger.info("Aspect ratio of playing multiview video: {}", aspectRatioVideo);
+        logger.debug("Aspect ratio of playing multiview video: {}", aspectRatioVideo);
 
         // compare the aspect ratios
         final double width;
@@ -415,6 +436,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         buttonToggleLyrics = new JButton();
         buttonVolume = new JButton();
         buttonhelp = new JButton();
+        panelVideoMultiview = new JPanel();
         dialogHelp = new JFrame();
         JPanel panelHelpContents = new JPanel();
         JScrollPane scrollPaneHelp = new JScrollPane();
@@ -517,6 +539,18 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                     new Insets(0, 0, 0, 20), 0, 0));
             }
             panelVideo.add(panel1, BorderLayout.NORTH);
+
+            //======== panelVideoMultiview ========
+            {
+                panelVideoMultiview.setOpaque(false);
+                panelVideoMultiview.setName("panelVideoMultiview");
+                panelVideoMultiview.setLayout(new GridBagLayout());
+                ((GridBagLayout)panelVideoMultiview.getLayout()).columnWidths = new int[] {0, 0};
+                ((GridBagLayout)panelVideoMultiview.getLayout()).rowHeights = new int[] {0, 0};
+                ((GridBagLayout)panelVideoMultiview.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+                ((GridBagLayout)panelVideoMultiview.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
+            }
+            panelVideo.add(panelVideoMultiview, BorderLayout.CENTER);
         }
         add(panelVideo, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
             GridBagConstraints.CENTER, GridBagConstraints.BOTH,
@@ -593,6 +627,7 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     private JButton buttonToggleLyrics;
     private JButton buttonVolume;
     private JButton buttonhelp;
+    private JPanel panelVideoMultiview;
     private JFrame dialogHelp;
     private JTextPane textPaneHelp;
     private JButton buttonCloseHelp;

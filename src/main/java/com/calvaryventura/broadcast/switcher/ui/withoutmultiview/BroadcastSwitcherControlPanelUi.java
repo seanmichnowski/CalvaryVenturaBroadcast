@@ -41,7 +41,7 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
      */
     public BroadcastSwitcherControlPanelUi()
     {
-        super(BroadcastSettings.getInst());
+        super();
         this.initComponents();
         this.buttonToggleLyrics.addActionListener(e -> {
             this.lyricsOnStatus = !this.lyricsOnStatus;

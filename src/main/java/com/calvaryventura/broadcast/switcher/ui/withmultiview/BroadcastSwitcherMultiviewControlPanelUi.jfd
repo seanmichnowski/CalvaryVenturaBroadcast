@@ -94,6 +94,17 @@ new FormModel {
 				}, new FormLayoutConstraints( class java.lang.String ) {
 					"value": "North"
 				} )
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+					"$columnSpecs": "0:1.0"
+					"$rowSpecs": "0:1.0"
+					"$alignTop": true
+					"$alignLeft": true
+				} ) {
+					name: "panelVideoMultiview"
+					"opaque": false
+				}, new FormLayoutConstraints( class java.lang.String ) {
+					"value": "Center"
+				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )

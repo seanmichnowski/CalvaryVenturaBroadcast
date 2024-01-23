@@ -17,18 +17,16 @@ public class AbstractBroadcastSwitcherUi extends JPanel
 
     // callbacks for actions the user produces when interacting with the GUI
     protected BroadcastSwitcherUiCallbacks callbacks;
-    protected BroadcastSettings broadcastSettings;
+    protected final BroadcastSettings settings = BroadcastSettings.getInst();
 
     /**
-     * @param settings general settings for this program
+     * Abstract constructor for the Blackmagic switcher UI.
      */
-    protected AbstractBroadcastSwitcherUi(BroadcastSettings settings)
+    protected AbstractBroadcastSwitcherUi()
     {
-        this.broadcastSettings = settings;
-
         // initialize the volume meter limits based on settings
-        this.popupVolumeUi.setVolumeMeterLimits(settings.getMinAudioLevelDb(), settings.getWarnAudioLevelDb(),
-                settings.getHighAudioLevelDb(), settings.getMaxAudioLevelDb());
+        this.popupVolumeUi.setVolumeMeterLimits(this.settings.getMinAudioLevelDb(), this.settings.getWarnAudioLevelDb(),
+                this.settings.getHighAudioLevelDb(), this.settings.getMaxAudioLevelDb());
     }
 
     /**

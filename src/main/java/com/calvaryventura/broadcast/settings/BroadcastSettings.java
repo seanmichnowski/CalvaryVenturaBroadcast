@@ -1,6 +1,7 @@
 package com.calvaryventura.broadcast.settings;
 
 import javax.swing.JOptionPane;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -38,6 +39,7 @@ public class BroadcastSettings
     private List<Point> videoSwitcherMultiviewProgramPaneGridBoxes;
     private List<Point> videoSwitcherMultiviewInputsGridBoxes;
     private String videoSwitcherMultiviewVlcMediaPath;
+    private Dimension videoSwitcherMultiviewVideoSize;
     private int minAudioLevelDb;
     private int warnAudioLevelDb;
     private int highAudioLevelDb;
@@ -151,8 +153,15 @@ public class BroadcastSettings
                     .collect(Collectors.toList());
 
             // multiview display
-            this.videoSwitcherMultiviewVlcMediaPath= lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("videoSwitcherMultiviewVlcMediaPath"))
+            this.videoSwitcherMultiviewVlcMediaPath = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("videoSwitcherMultiviewVlcMediaPath"))
                     .findFirst().orElseThrow(() -> new RuntimeException("Cannot find multiview parameter in settings file"))[1].trim();
+
+            // size of the streaming multiview video (width X height)
+            final int multiviewVideoWidth = !this.videoSwitcherMultiviewEnabled ? 0 : Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("videoSwitcherMultiviewVideoWidth"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find multivew streaming video width in settings file"))[1].trim());
+            final int multiviewVideoHeight = !this.videoSwitcherMultiviewEnabled ? 0 : Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("videoSwitcherMultiviewVideoHeight"))
+                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find multivew streaming video height in settings file"))[1].trim());
+            this.videoSwitcherMultiviewVideoSize = new Dimension(multiviewVideoWidth, multiviewVideoHeight);
 
             // audio
             this.minAudioLevelDb = Integer.parseInt(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("minAudioLevelDb"))
@@ -274,6 +283,11 @@ public class BroadcastSettings
     public String getVideoSwitcherMultiviewVlcMediaPath()
     {
         return videoSwitcherMultiviewVlcMediaPath;
+    }
+
+    public Dimension getVideoSwitcherMultiviewVideoSize()
+    {
+        return videoSwitcherMultiviewVideoSize;
     }
 
     public int getMinAudioLevelDb()
