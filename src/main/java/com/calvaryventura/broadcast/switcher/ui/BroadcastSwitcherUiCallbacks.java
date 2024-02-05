@@ -10,8 +10,6 @@ public interface BroadcastSwitcherUiCallbacks
 
     void onProgramSourceChanged(int programSourceChanged);
 
-    void onFadeToBlack();
-
     void setSwitcherSendingLiveAudio(boolean enable);
 
     void setAudioLevelPercent(double percent0to1);

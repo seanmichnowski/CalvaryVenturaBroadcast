@@ -1,5 +1,6 @@
 package com.calvaryventura.broadcast.ptzcamera.control;
 
+import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 /**
@@ -15,20 +16,12 @@ public class PtzCameraController
 
     /**
      * @param displayName human-readable name designator of this camera
-     * @param ipAddress address of the PTZ camera
-     * @param port port of the PTZ camera's VISCA interface
-     */
-    public PtzCameraController(String displayName, String ipAddress, int port)
-    {
-        this.viscaTcpNetworkInterface = new PtzCameraViscaTcpNetworkInterface(displayName, ipAddress, port);
-    }
-
-    /**
+     * @param socketAddress PTZ camera IP/port for its network VISCA interface
      * @param cameraConnectionStatus notifies the parent of the camera being connected to the TCP VISCA port
      */
-    public void onCameraConnectionStatus(Consumer<Boolean> cameraConnectionStatus)
+    public PtzCameraController(String displayName, InetSocketAddress socketAddress, Consumer<Boolean> cameraConnectionStatus)
     {
-        this.viscaTcpNetworkInterface.addConnectionListener(cameraConnectionStatus);
+        this.viscaTcpNetworkInterface = new PtzCameraViscaTcpNetworkInterface(displayName, socketAddress.getHostString(), socketAddress.getPort(), cameraConnectionStatus);
     }
 
     /**

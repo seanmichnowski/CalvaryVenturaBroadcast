@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,8 +27,10 @@ public class BroadcastSettings
 
     // settings
     private String programTitle;
-    private String leftCameraIp;
-    private String rightCameraIp;
+    private List<String> ptzCameraIps;
+    private List<Integer> ptzCameraPorts;
+    private List<String> ptzCameraNames;
+    private List<Integer> ptzCameraSwitcherInputIndexes;
     private String switcherIp;
     private List<String> defaultPresetNames;
     private int lyricsOverlayVideoSourceIdx;
@@ -83,13 +86,25 @@ public class BroadcastSettings
             this.programTitle = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("programTitle"))
                     .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'programTitle' in settings file"))[1].trim();
 
-            // left camera IP
-            this.leftCameraIp = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("leftCameraIp"))
-                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'leftCameraIp' in settings file"))[1].trim();
+            // PTZ camera names
+            this.ptzCameraNames = Arrays.stream(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("ptzCameraNames"))
+                            .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'ptzCameraNames' in settings file"))[1].trim().split(","))
+                    .map(String::trim).collect(Collectors.toList());
 
-            // right camera IP
-            this.rightCameraIp = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("rightCameraIp"))
-                    .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'rightCameraIp' in settings file"))[1].trim();
+            // PTZ camera IP addresses (VISCA control connection to the camera)
+            this.ptzCameraIps = Arrays.stream(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("ptzCameraIps"))
+                            .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'ptzCameraIps' in settings file"))[1].trim().split(","))
+                    .map(String::trim).collect(Collectors.toList());
+
+            // PTZ camera IP ports (VISCA control connection to the camera)
+            this.ptzCameraPorts = Arrays.stream(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("ptzCameraPorts"))
+                            .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'ptzCameraPorts' in settings file"))[1].trim().split(","))
+                    .map(String::trim).map(Integer::parseInt).collect(Collectors.toList());
+
+            // PTZ camera input indexes to the video switcher (this should mirror the same indexes that are set to the switcher)
+            this.ptzCameraSwitcherInputIndexes = Arrays.stream(lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("ptzCameraSwitcherInputIndexes"))
+                            .findFirst().orElseThrow(() -> new RuntimeException("Cannot find 'ptzCameraSwitcherInputIndexes' in settings file"))[1].trim().split(","))
+                    .map(String::trim).map(Integer::parseInt).collect(Collectors.toList());
 
             // video switcher IP
             this.switcherIp = lines.stream().filter(split -> split[0].trim().equalsIgnoreCase("videoSwitcherIp"))
@@ -191,19 +206,21 @@ public class BroadcastSettings
     }
 
     /**
-     * @return IP address of the left camera
+     * @return map where each entry is a PTZ camera's name and IP address/port
      */
-    public String getLeftCameraIp()
+    public Map<String, InetSocketAddress> getPtzCameraNamesIps()
     {
-        return this.leftCameraIp;
+        return IntStream.range(0, this.ptzCameraIps.size()).boxed().collect(Collectors.toMap(
+                i -> this.ptzCameraNames.get(i),
+                i -> new InetSocketAddress(this.ptzCameraIps.get(i), this.ptzCameraPorts.get(i))));
     }
 
     /**
-     * @return IP address of the right camera
+     * @return indexes for the PTZ cameras that map to video switcher inputs
      */
-    public String getRightCameraIp()
+    public List<Integer> getPtzCameraSwitcherInputIndexes()
     {
-        return this.rightCameraIp;
+        return ptzCameraSwitcherInputIndexes;
     }
 
     /**
@@ -239,6 +256,7 @@ public class BroadcastSettings
     }
 
     // one day remove calling out specifically left/right cameras, see the broadcast_settings.txt file for a comment there
+    // TODO remove me!!!!
     public int getLeftCameraVideoIndex()
     {
         return this.switcherVideoNamesAndIndexes.get("LEFT");

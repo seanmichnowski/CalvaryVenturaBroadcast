@@ -2,6 +2,8 @@ package com.calvaryventura.broadcast.main;
 
 import java.awt.*;
 import java.lang.invoke.MethodHandles;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -15,7 +17,7 @@ import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUiCallbacks;
 import com.calvaryventura.broadcast.switcher.ui.withmultiview.BroadcastSwitcherMultiviewControlPanelUi;
 import com.calvaryventura.broadcast.switcher.ui.withoutmultiview.BroadcastSwitcherControlPanelUi;
-import com.calvaryventura.broadcast.uiwidgets.SplitPaneBarColorizer;
+import com.calvaryventura.broadcast.uiwidgets.TitledBorderCreator;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +32,7 @@ public class BroadcastControlMain extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
-    private final PtzCameraController leftCameraController;
-    private final PtzCameraController rightCameraController;
+    private final List<PtzCameraUi> ptzCameraUis = new ArrayList<>();
     private final BroadcastSettings settings;
 
     /**
@@ -59,87 +60,63 @@ public class BroadcastControlMain extends JFrame
         this.setTitle(this.settings.getProgramTitle());
         this.setVisible(true);
 
-        // add a custom colored UI to the split pane bar instead of the original boring one
-        SplitPaneBarColorizer.setSplitPaneBarStriped(this.parentSplitPane, Color.GREEN);
-
         // make all scroll bars wider so they are easier to grab on a touchscreen
         UIManager.put("ScrollBar.width", 30);
 
-        // initialize LEFT/RIGHT camera command senders
-        this.leftCameraController = new PtzCameraController("LEFT", this.settings.getLeftCameraIp(), 5678);
-        this.rightCameraController = new PtzCameraController("RIGHT", this.settings.getRightCameraIp(), 5678);
-        this.leftCameraController.onCameraConnectionStatus(connected -> this.leftCameraControlPanel.setCameraConnectionStatus(connected));
-        this.rightCameraController.onCameraConnectionStatus(connected -> this.rightCameraControlPanel.setCameraConnectionStatus(connected));
-
-        // connect LEFT camera UI panel actions
-        this.leftCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
+        // initialize PTZ camera(s)
+        this.settings.getPtzCameraNamesIps().forEach((ptzCameraName, ptzCameraSocketAddress) ->
         {
-            @Override
-            public boolean setPressed(int presetIdx)
-            {
-                return leftCameraController.savePreset(presetIdx);
-            }
+            // for each PTZ camera, create the controller and create the UI
+            final PtzCameraUi ptzCameraUi = new PtzCameraUi(ptzCameraName);
+            final PtzCameraController ptzCameraController = new PtzCameraController(ptzCameraName, ptzCameraSocketAddress, ptzCameraUi::setCameraConnectionStatus);
+            this.ptzCameraUis.add(ptzCameraUi);
 
-            @Override
-            public boolean callPressed(int presetIdx)
+            // connect LEFT camera UI panel actions
+            ptzCameraUi.setCallback(new IPtzCameraUiCallbacks()
             {
-                // attempt to move the camera, also show this camera in the preview window
-                final boolean cameraMoveOk = leftCameraController.moveToPreset(presetIdx);
-                switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex());
-                SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnLeftRightCameraUis());
-                return cameraMoveOk;
-            }
+                @Override
+                public boolean setPressed(int presetIdx)
+                {
+                    return ptzCameraController.savePreset(presetIdx);
+                }
 
-            @Override
-            public boolean panTilt(double pan, double tilt)
-            {
-                return leftCameraController.panAndTilt(pan, tilt);
-            }
+                @Override
+                public boolean callPressed(int presetIdx)
+                {
+                    // attempt to move the camera, also show this camera in the preview window
+                    final boolean cameraMoveOk = ptzCameraController.moveToPreset(presetIdx);
+                    switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex());
+                    SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnLeftRightCameraUis());
+                    return cameraMoveOk;
+                }
 
-            @Override
-            public boolean zoom(double zoom)
-            {
-                return leftCameraController.changeZoom(zoom);
-            }
+                @Override
+                public boolean panTilt(double pan, double tilt)
+                {
+                    return ptzCameraController.panAndTilt(pan, tilt);
+                }
+
+                @Override
+                public boolean zoom(double zoom)
+                {
+                    return ptzCameraController.changeZoom(zoom);
+                }
+            });
+
+            // load presets for the camera's UI
+            ptzCameraUi.loadPresetsSavedToDisk();
         });
 
-        // connect RIGHT camera UI panel actions
-        this.rightCameraControlPanel.setCallback(new IPtzCameraUiCallbacks()
-        {
-            @Override
-            public boolean setPressed(int presetIdx)
-            {
-                return rightCameraController.savePreset(presetIdx);
-            }
-
-            @Override
-            public boolean callPressed(int presetIdx)
-            {
-                // attempt to move the camera, also show this camera in the preview window
-                final boolean cameraMoveOk = rightCameraController.moveToPreset(presetIdx);
-                switcherCommandSender.setPreviewVideo(settings.getRightCameraVideoIndex());
-                SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnLeftRightCameraUis());
-                return cameraMoveOk;
-            }
-
-            @Override
-            public boolean panTilt(double pan, double tilt)
-            {
-                return rightCameraController.panAndTilt(pan, tilt);
-            }
-
-            @Override
-            public boolean zoom(double zoom)
-            {
-                return rightCameraController.changeZoom(zoom);
-            }
-        });
+        // add all PTZ camera UI panels we just created to the parent panel
+        this.ptzCameraUis.forEach(ui -> this.parentPtzCamerasPanel.add(ui));
+        this.parentPtzCamerasPanel.revalidate();
 
         // set up the video switcher control UI implementation
         logger.info("Starting connection to video switcher, multiview={}", this.settings.isVideoSwitcherMultiviewEnabled() ? "enabled" : "disabled");
         final AbstractBroadcastSwitcherUi videoSwitcherControllerUi = this.settings.isVideoSwitcherMultiviewEnabled()
                 ? new BroadcastSwitcherMultiviewControlPanelUi() : new BroadcastSwitcherControlPanelUi();
         this.switcherControlPanel.add(videoSwitcherControllerUi, BorderLayout.CENTER);
+        this.switcherControlPanel.setBorder(TitledBorderCreator.createTitledBorder("Video Switcher"));
 
         // connections for the switcher's UI control panel to actually send commands
         final AtomicBoolean lyricsEnabled = new AtomicBoolean(false);
@@ -155,12 +132,6 @@ public class BroadcastControlMain extends JFrame
             public void onProgramSourceChanged(int programSourceChanged)
             {
                 switcherCommandSender.setProgramVideo(programSourceChanged);
-            }
-
-            @Override
-            public void onFadeToBlack()
-            {
-                switcherCommandSender.performFadeToBlack();
             }
 
             @Override
@@ -212,10 +183,6 @@ public class BroadcastControlMain extends JFrame
         // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
         videoSwitcherControllerUi.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
 
-        // load saved presets for the PTZ camera control panels
-        this.leftCameraControlPanel.loadPresetsSavedToDisk();
-        this.rightCameraControlPanel.loadPresetsSavedToDisk();
-
         // after UI initialization is done, finally start the connection to the switcher
         this.switcherCommandSender.initialize(settings.getSwitcherIp());
     }
@@ -230,12 +197,13 @@ public class BroadcastControlMain extends JFrame
         // pull current preview/program sources
         final int previewIdx = this.switcherCommandSender.getCurrentVideoPreviewIdx();
         final int programIdx = this.switcherCommandSender.getCurrentVideoProgramIdx();
-        final int leftCameraIdx = this.settings.getLeftCameraVideoIndex();
-        final int rightCameraIdx = this.settings.getRightCameraVideoIndex();
 
-        // update cameras
-        this.leftCameraControlPanel.setActivePresetBackgroundColor(programIdx == leftCameraIdx ? Color.RED : previewIdx == leftCameraIdx ? Color.GREEN : null);
-        this.rightCameraControlPanel.setActivePresetBackgroundColor(programIdx == rightCameraIdx ? Color.RED : previewIdx == rightCameraIdx ? Color.GREEN : null);
+        // update all PTZ camera UI panels to potentially show the current video switcher's PREVIEW/PROGRAM state
+        for (int i = 0; i < this.ptzCameraUis.size(); i++)
+        {
+            final int videoSwitcherInputIdxForThisPtzCamera = this.settings.getPtzCameraSwitcherInputIndexes().get(i);
+            this.ptzCameraUis.get(i).setActivePresetBackgroundColor(programIdx == videoSwitcherInputIdxForThisPtzCamera ? Color.RED : previewIdx == videoSwitcherInputIdxForThisPtzCamera ? Color.GREEN : null);
+        }
     }
 
     /**
@@ -245,12 +213,8 @@ public class BroadcastControlMain extends JFrame
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        JPanel panel1 = new JPanel();
-        parentSplitPane = new JSplitPane();
-        JPanel panelTop = new JPanel();
-        leftCameraControlPanel = new PtzCameraUi();
-        rightCameraControlPanel = new PtzCameraUi();
-        JPanel panel2 = new JPanel();
+        JPanel panelMainContent = new JPanel();
+        parentPtzCamerasPanel = new JPanel();
         switcherControlPanel = new JPanel();
 
         //======== this ========
@@ -264,99 +228,50 @@ public class BroadcastControlMain extends JFrame
         Container contentPane = getContentPane();
         contentPane.setLayout(new BorderLayout());
 
-        //======== panel1 ========
+        //======== panelMainContent ========
         {
-            panel1.setBorder(new EmptyBorder(5, 0, 5, 0));
-            panel1.setBackground(Color.black);
-            panel1.setName("panel1");
-            panel1.setLayout(new GridBagLayout());
-            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0};
-            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0};
-            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {0.6, 1.0E-4};
+            panelMainContent.setBorder(new EmptyBorder(5, 0, 5, 0));
+            panelMainContent.setBackground(Color.black);
+            panelMainContent.setName("panelMainContent");
+            panelMainContent.setLayout(new GridBagLayout());
+            ((GridBagLayout)panelMainContent.getLayout()).columnWidths = new int[] {0, 0};
+            ((GridBagLayout)panelMainContent.getLayout()).rowHeights = new int[] {0, 0, 0};
+            ((GridBagLayout)panelMainContent.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+            ((GridBagLayout)panelMainContent.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
 
-            //======== parentSplitPane ========
+            //======== parentPtzCamerasPanel ========
             {
-                parentSplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-                parentSplitPane.setOpaque(false);
-                parentSplitPane.setResizeWeight(0.5);
-                parentSplitPane.setName("parentSplitPane");
-
-                //======== panelTop ========
-                {
-                    panelTop.setOpaque(false);
-                    panelTop.setBorder(new EmptyBorder(0, 0, 10, 0));
-                    panelTop.setPreferredSize(new Dimension(673, 480));
-                    panelTop.setName("panelTop");
-                    panelTop.setLayout(new GridBagLayout());
-                    ((GridBagLayout)panelTop.getLayout()).columnWidths = new int[] {0, 0, 0};
-                    ((GridBagLayout)panelTop.getLayout()).rowHeights = new int[] {0, 0};
-                    ((GridBagLayout)panelTop.getLayout()).columnWeights = new double[] {1.0, 1.0, 1.0E-4};
-                    ((GridBagLayout)panelTop.getLayout()).rowWeights = new double[] {0.6, 1.0E-4};
-
-                    //---- leftCameraControlPanel ----
-                    leftCameraControlPanel.setBorder(new CompoundBorder(
-                        new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "LEFT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                            new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                        new EmptyBorder(0, 5, 5, 5)));
-                    leftCameraControlPanel.setPreferredSize(new Dimension(324, 500));
-                    leftCameraControlPanel.setMinimumSize(new Dimension(324, 200));
-                    leftCameraControlPanel.setName("leftCameraControlPanel");
-                    panelTop.add(leftCameraControlPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                        new Insets(0, 0, 0, 25), 0, 0));
-
-                    //---- rightCameraControlPanel ----
-                    rightCameraControlPanel.setBorder(new CompoundBorder(
-                        new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "RIGHT Camera", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                            new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                        new EmptyBorder(0, 5, 5, 5)));
-                    rightCameraControlPanel.setPreferredSize(new Dimension(324, 500));
-                    rightCameraControlPanel.setMinimumSize(new Dimension(324, 200));
-                    rightCameraControlPanel.setName("rightCameraControlPanel");
-                    panelTop.add(rightCameraControlPanel, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                        new Insets(0, 0, 0, 0), 0, 0));
-                }
-                parentSplitPane.setTopComponent(panelTop);
-
-                //======== panel2 ========
-                {
-                    panel2.setOpaque(false);
-                    panel2.setBorder(new EmptyBorder(5, 0, 0, 0));
-                    panel2.setName("panel2");
-                    panel2.setLayout(new BorderLayout());
-
-                    //======== switcherControlPanel ========
-                    {
-                        switcherControlPanel.setBorder(new CompoundBorder(
-                            new TitledBorder(new LineBorder(new Color(0xb200b2), 3, true), "Video Switcher", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                                new Font("Segoe UI", Font.BOLD, 20), Color.magenta),
-                            new EmptyBorder(5, 5, 5, 5)));
-                        switcherControlPanel.setOpaque(false);
-                        switcherControlPanel.setPreferredSize(new Dimension(24, 200));
-                        switcherControlPanel.setMinimumSize(new Dimension(24, 200));
-                        switcherControlPanel.setName("switcherControlPanel");
-                        switcherControlPanel.setLayout(new BorderLayout());
-                    }
-                    panel2.add(switcherControlPanel, BorderLayout.CENTER);
-                }
-                parentSplitPane.setBottomComponent(panel2);
+                parentPtzCamerasPanel.setOpaque(false);
+                parentPtzCamerasPanel.setBorder(BorderFactory.createEmptyBorder());
+                parentPtzCamerasPanel.setPreferredSize(new Dimension(673, 480));
+                parentPtzCamerasPanel.setMinimumSize(new Dimension(0, 0));
+                parentPtzCamerasPanel.setName("parentPtzCamerasPanel");
+                parentPtzCamerasPanel.setLayout(new GridLayout(1, 0, 20, 0));
             }
-            panel1.add(parentSplitPane, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+            panelMainContent.add(parentPtzCamerasPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 15, 0), 0, 0));
+
+            //======== switcherControlPanel ========
+            {
+                switcherControlPanel.setOpaque(false);
+                switcherControlPanel.setPreferredSize(new Dimension(24, 100));
+                switcherControlPanel.setMinimumSize(new Dimension(24, 0));
+                switcherControlPanel.setName("switcherControlPanel");
+                switcherControlPanel.setLayout(new BorderLayout());
+            }
+            panelMainContent.add(switcherControlPanel, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 0), 0, 0));
         }
-        contentPane.add(panel1, BorderLayout.CENTER);
+        contentPane.add(panelMainContent, BorderLayout.CENTER);
         pack();
         setLocationRelativeTo(getOwner());
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    private JSplitPane parentSplitPane;
-    private PtzCameraUi leftCameraControlPanel;
-    private PtzCameraUi rightCameraControlPanel;
+    private JPanel parentPtzCamerasPanel;
     private JPanel switcherControlPanel;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

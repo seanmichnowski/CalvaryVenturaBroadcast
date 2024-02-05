@@ -13,6 +13,7 @@ new FormModel {
 		} ) {
 			name: "this"
 			"background": sfield java.awt.Color black
+			"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( sfield java.awt.Color magenta, 3, true ), "Title", 4, 0, new java.awt.Font( "Ubuntu", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 0, 5, 5, 5 ) )
 			add( new FormComponent( "javax.swing.JLabel" ) {
 				name: "labelConnectionStatus"
 				"text": "Camera not connected :("

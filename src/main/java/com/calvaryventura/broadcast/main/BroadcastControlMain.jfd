@@ -13,81 +13,41 @@ new FormModel {
 			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/icons/camera_fullsize.png" )
 			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 				"$columnSpecs": "0:1.0"
-				"$rowSpecs": "0:0.6"
+				"$rowSpecs": "0:1.0, 0:1.0"
 				"$alignTop": true
 				"$alignLeft": true
 				"$hGap": 25
-				"$vGap": 20
+				"$vGap": 15
 			} ) {
-				name: "panel1"
+				name: "panelMainContent"
 				"border": new javax.swing.border.EmptyBorder( 5, 0, 5, 0 )
 				"background": sfield java.awt.Color black
 				auxiliary() {
 					"JavaCodeGenerator.variableLocal": true
 				}
-				add( new FormContainer( "javax.swing.JSplitPane", new FormLayoutManager( class javax.swing.JSplitPane ) ) {
-					name: "parentSplitPane"
-					"orientation": 0
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
+					"hgap": 20
+				} ) {
+					name: "parentPtzCamerasPanel"
 					"opaque": false
-					"resizeWeight": 0.5
-					add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
-						"$columnSpecs": "0:1.0, 0:1.0"
-						"$rowSpecs": "0:0.6"
-						"$hGap": 25
-						"$vGap": 20
-						"$alignTop": true
-						"$alignLeft": true
-					} ) {
-						name: "panelTop"
-						"opaque": false
-						"border": new javax.swing.border.EmptyBorder( 0, 0, 10, 0 )
-						"preferredSize": new java.awt.Dimension( 673, 480 )
-						auxiliary() {
-							"JavaCodeGenerator.variableLocal": true
-						}
-						add( new FormComponent( "com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi" ) {
-							name: "leftCameraControlPanel"
-							"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "LEFT Camera", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 0, 5, 5, 5 ) )
-							"preferredSize": new java.awt.Dimension( 324, 500 )
-							"minimumSize": new java.awt.Dimension( 324, 200 )
-						}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
-						add( new FormComponent( "com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi" ) {
-							name: "rightCameraControlPanel"
-							"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "RIGHT Camera", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 0, 5, 5, 5 ) )
-							"preferredSize": new java.awt.Dimension( 324, 500 )
-							"minimumSize": new java.awt.Dimension( 324, 200 )
-						}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-							"gridx": 1
-						} )
-					}, new FormLayoutConstraints( class java.lang.String ) {
-						"value": "left"
-					} )
-					add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
-						name: "panel2"
-						"opaque": false
-						"border": new javax.swing.border.EmptyBorder( 5, 0, 0, 0 )
-						auxiliary() {
-							"JavaCodeGenerator.variableLocal": true
-						}
-						add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
-							name: "switcherControlPanel"
-							"border": new javax.swing.border.CompoundBorder( new javax.swing.border.TitledBorder( new javax.swing.border.LineBorder( new java.awt.Color( 178, 0, 178, 255 ), 3, true ), "Video Switcher", 4, 0, new java.awt.Font( "Segoe UI", 1, 20 ), sfield java.awt.Color magenta ), new javax.swing.border.EmptyBorder( 5, 5, 5, 5 ) )
-							"opaque": false
-							"preferredSize": new java.awt.Dimension( 24, 200 )
-							"minimumSize": new java.awt.Dimension( 24, 200 )
-						}, new FormLayoutConstraints( class java.lang.String ) {
-							"value": "Center"
-						} )
-					}, new FormLayoutConstraints( class java.lang.String ) {
-						"value": "right"
-					} )
+					"border": new javax.swing.border.EmptyBorder( 0, 0, 0, 0 )
+					"preferredSize": new java.awt.Dimension( 673, 480 )
+					"minimumSize": new java.awt.Dimension( 0, 0 )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
+					name: "switcherControlPanel"
+					"opaque": false
+					"preferredSize": new java.awt.Dimension( 24, 100 )
+					"minimumSize": new java.awt.Dimension( 24, 0 )
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 1
+				} )
 			}, new FormLayoutConstraints( class java.lang.String ) {
 				"value": "Center"
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )
-			"size": new java.awt.Dimension( 755, 1060 )
+			"size": new java.awt.Dimension( 710, 955 )
 		} )
 	}
 }

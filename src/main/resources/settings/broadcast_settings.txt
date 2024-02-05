@@ -1,10 +1,11 @@
 # Set a custom title for the program's frame when it is opened
 programTitle=Calvary Ventura Broadcast
 
-# one day we could actually have another list of PTZ camera NAME's and IP's, similar to the switcher!
-# network-controlled cameras
-leftCameraIp=192.168.86.32
-rightCameraIp=192.168.86.31
+# network-controlled cameras (VISCA TCP control protocol)
+ptzCameraNames=LEFT Camera,RIGHT Camera
+ptzCameraIps=192.168.86.32,192.168.86.31
+ptzCameraPorts=5678,5678
+ptzCameraSwitcherInputIndexes=6,7
 
 # names to appear as default options for naming presets
 defaultPresetNames=lead vocals,left vocals,right vocals,group vocals,acoustic guitar,electric guitar,piano,drums,bass,podium,podium wide,audience

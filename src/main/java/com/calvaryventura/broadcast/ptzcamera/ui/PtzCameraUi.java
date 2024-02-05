@@ -1,7 +1,12 @@
 package com.calvaryventura.broadcast.ptzcamera.ui;
 
+import javax.swing.border.*;
+
+import com.calvaryventura.broadcast.uiwidgets.TitledBorderCreator;
 import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
 import com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,6 +14,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,23 +27,29 @@ import java.util.stream.IntStream;
  */
 public class PtzCameraUi extends JPanel
 {
+    private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private static final int NUM_PRESETS = 6;
+    private final String ptzCameraName;
     private final List<PtzCameraUiItem> presets = new ArrayList<>();
     private int lastClickedPresetIdx = -1;
     private IPtzCameraUiCallbacks callback;
     private File saveFile;
     private Color lastBackgroundColor;
 
-    // complicated layout descriptor for adding  PTZ camera preset items into their layout panel, but it does make them stack nice and allows vertical space between entries to grow and fill
+    // complicated layout descriptor for adding PTZ camera preset items into their layout panel, but it does make them stack nice and allows vertical space between entries to grow and fill
     private static final GridBagConstraints GRID_BAG_CONSTRAINTS = new GridBagConstraints(0, GridBagConstraints.RELATIVE, 1, NUM_PRESETS,
             1.0, 1.0, GridBagConstraints.NORTH, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0);
 
     /**
-     * MAIN - wait on connect before doing anything else
+     * @param ptzCameraName display name for this PTZ camera
      */
-    public PtzCameraUi()
+    public PtzCameraUi(String ptzCameraName)
     {
+        this.ptzCameraName = ptzCameraName;
         this.initComponents();
+
+        // set the title in the border
+        this.setBorder(TitledBorderCreator.createTitledBorder(ptzCameraName));
 
         // add the desired number of preset boxes to the panel
         IntStream.range(0, NUM_PRESETS).boxed().forEach(i ->
@@ -116,8 +128,10 @@ public class PtzCameraUi extends JPanel
      */
     public void loadPresetsSavedToDisk()
     {
-        final String name = this.getName(); // unique name for associating this bank of camera presets
+        // the unique name for this PTZ camera is used to save and restore presets
+        final String name = this.ptzCameraName.replaceAll(" ", "_").toLowerCase();
         this.saveFile = new File(System.getProperty("user.home") + "/camera_presets_" + name + ".txt");
+        logger.info("Loading saved presets for camera '{}' from file '{}'", this.ptzCameraName, this.saveFile);
         if (!this.saveFile.isFile())
         {
             try
@@ -184,6 +198,10 @@ public class PtzCameraUi extends JPanel
 
         //======== this ========
         setBackground(Color.black);
+        setBorder(new CompoundBorder(
+            new TitledBorder(new LineBorder(Color.magenta, 3, true), "Title", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                new Font("Ubuntu", Font.BOLD, 20), Color.magenta),
+            new EmptyBorder(0, 5, 5, 5)));
         setName("this");
         setLayout(new GridBagLayout());
         ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};

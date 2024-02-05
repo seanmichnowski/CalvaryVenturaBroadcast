@@ -13,8 +13,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -42,7 +40,7 @@ public class PtzCameraViscaTcpNetworkInterface
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final ScheduledExecutorService connectionThread = Executors.newSingleThreadScheduledExecutor();
-    private final List<Consumer<Boolean>> connectionStateListeners = new ArrayList<>();
+    private final Consumer<Boolean> connectionStateListener;
     private final BlockingQueue<byte[]> rxProcessingQueue = new LinkedBlockingQueue<>();
     private final String displayName;
     private final InetSocketAddress serverSocketAddress;
@@ -57,20 +55,14 @@ public class PtzCameraViscaTcpNetworkInterface
      * @param displayName human-readable name designator of this camera
      * @param ipAddress address of the PTZ camera
      * @param port port of the PTZ camera's VISCA interface
+     * @param connectionStateListener notifies parent of connection/disconnection change
      */
-    public PtzCameraViscaTcpNetworkInterface(String displayName, String ipAddress, int port)
+    public PtzCameraViscaTcpNetworkInterface(String displayName, String ipAddress, int port, Consumer<Boolean> connectionStateListener)
     {
         this.displayName = displayName;
         this.serverSocketAddress = new InetSocketAddress(ipAddress, port);
+        this.connectionStateListener = connectionStateListener;
         this.start();
-    }
-
-    /**
-     * @param connectionStateListener notifies parent of connection/disconnection change
-     */
-    public void addConnectionListener(Consumer<Boolean> connectionStateListener)
-    {
-        this.connectionStateListeners.add(connectionStateListener);
     }
 
     /**
@@ -172,7 +164,7 @@ public class PtzCameraViscaTcpNetworkInterface
         if (this.lastConnectionState == null || newConnectionState != this.lastConnectionState)
         {
             this.lastConnectionState = newConnectionState;
-            this.connectionStateListeners.forEach(c -> Executors.newSingleThreadExecutor().execute(() -> c.accept(newConnectionState)));
+            Executors.newSingleThreadExecutor().execute(() -> this.connectionStateListener.accept(newConnectionState));
         }
     }
 

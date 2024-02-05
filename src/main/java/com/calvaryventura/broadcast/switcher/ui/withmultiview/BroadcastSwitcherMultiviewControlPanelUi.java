@@ -29,8 +29,6 @@ import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 /**
@@ -102,43 +100,52 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         {
             this.initializeMouseSelectionOnMultiviewPanel(this.videoCanvas);
             this.initializeVlcPlayback(this.videoCanvas);
-            this.panelVideoMultiview.add(this.videoCanvas); // GridBagLayout
+            SwingUtilities.invokeLater(() -> this.add(this.videoCanvas)); // GridBagLayout
         } else
         {
             // no VLC installed!
             final JLabel errorMessage = new JLabel(VLC_NOT_INSTALLED_ERROR_MSG);
             errorMessage.setForeground(Color.RED);
             errorMessage.setFont(new Font("Arial", Font.BOLD, 20));
-            this.panelVideoMultiview.add(errorMessage); // GridBagLayout
+            this.add(errorMessage); // GridBagLayout
         }
 
-/*
-        this.panelVideoMultiview.addComponentListener(new ComponentAdapter()
+        this.videoCanvas.addAncestorListener(new AncestorListener()
         {
             @Override
-            public void componentResized(ComponentEvent e)
+            public void ancestorAdded(AncestorEvent event)
             {
-                System.out.printf("REsized\n");
-                super.componentResized(e);
+                SwingUtilities.invokeLater(() -> {
 
-                // TODO kind of....
-
-                    // TODO maybe I need to listen for ancestor listener on the parent and NOT the video canvas!!!
-                    logger.info("VIDEO COMPONENT SHOWN!");
+// TODO OK I think I need to add a listener on the overall PARENT FRAME on a component resized event.. get the size.. then only then can I resize the height for the multiview panel
+//  that's the only way because it will (1) change as the overall frame is resized and (2) not continuously generate a component event
+                    logger.info("\n\n\n****called 2!?\n\n\n");
+                    // TODO I need to run this to try it
                     final Dimension videoPlaybackDimensions = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
                     final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
-                    int width = panelVideoMultiview.getWidth();
-                    int proposedHeight = (int) (width / aspectRatioVideo);
-                    System.out.printf("Current canvas width: %dpix, aspect ratio video: %f, new proposed canvas height=%dpix\n", width, aspectRatioVideo, proposedHeight);
-                    //panelVideoMultiview.setSize(width, proposedHeight);
-                    videoCanvas.setPreferredSize(new Dimension(width, proposedHeight));
-                panelVideoMultiview.setBackground(new Color((int) (Math.random() * 100), 100, 100));
-                panelVideoMultiview.setOpaque(true);
-                panelVideoMultiview.revalidate(); // TODO progress but not fully.....
+
+                    final int proposedVideoCanvasHeight = (int) (videoCanvas.getWidth() / aspectRatioVideo);
+                    final int deltaVideoCanvasHeight = proposedVideoCanvasHeight - videoCanvas.getHeight();
+                    logger.info("Current video canvas height: {} proposed height: {}", videoCanvas.getHeight(), proposedVideoCanvasHeight);
+                    final Dimension dim = new Dimension(getParent().getWidth(), getParent().getHeight() + deltaVideoCanvasHeight);
+                    getParent().setPreferredSize(dim);
+//                getParent().setMinimumSize(dim);
+//                getParent().setMaximumSize(dim);
+                });
+            }
+
+            @Override
+            public void ancestorRemoved(AncestorEvent event)
+            {
+
+            }
+
+            @Override
+            public void ancestorMoved(AncestorEvent event)
+            {
+
             }
         });
- */
-
     }
 
     /**
@@ -200,7 +207,9 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                                 } else if (e.getClickCount() == 2)
                                 {
                                     logger.info("Changing to program video input idx={} name={}", switcherSourceIdx, switcherSourceName);
-                                    callbacks.onProgramSourceChanged(switcherSourceIdx);
+                                    // TODO callbacks.onProgramSourceChanged(switcherSourceIdx);
+                                    callbacks.onPreviewSourceChanged(switcherSourceIdx);
+                                    callbacks.onFadePressed();
                                 }
                             });
                 }
@@ -239,13 +248,11 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
 
 
 /*
-                // I'd like to be able to automatically set the panel size based on the incoming aspect ratio...
                 // TODO try better media streaming...
                 // https://stackoverflow.com/questions/71304226/how-to-receive-mpegts-multicast-steam-on-vlc
                 // DJ is right, latency is going to be dependent on nearly everything. However, I am finding that latency of some formats can be reduced to unnoticable levels, "unnoticable" being roughly 100-200ms. I am having good luck with MPEG-2 TS via UDP multicast with encoding rates ~3-4K.
                 //However, I am not having much luck with MPEG-4 via RTSP. I can get latency down to 500-600ms by hammering on caching values, but after a day of poking at settings I am unable to do much better than that on either OS X or XP. There is a cache somewhere in the process that either I have missed, or can't be reduced through the GUI or command line.
                 // TODO add buttons for setting AUX source and also maybe a fade transition T-bar
-                // TODO also need to make the volume popup modal? so that clicking anywhere outside it doesn't activate a real click outside the volume popup
  */
             }
 
@@ -376,12 +383,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             }
 
             @Override
-            public void onFadeToBlack()
-            {
-                logger.info("Fade to Black");
-            }
-
-            @Override
             public void setSwitcherSendingLiveAudio(boolean enable)
             {
                 logger.info("Switcher sends live audio levels: {}", enable);
@@ -428,7 +429,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents  @formatter:off
-        panelVideo = new JPanel();
         JPanel panel1 = new JPanel();
         JPanel panel2 = new JPanel();
         labelTransitionInProgress = new JLabel();
@@ -436,7 +436,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         buttonToggleLyrics = new JButton();
         buttonVolume = new JButton();
         buttonhelp = new JButton();
-        panelVideoMultiview = new JPanel();
         dialogHelp = new JFrame();
         JPanel panelHelpContents = new JPanel();
         JScrollPane scrollPaneHelp = new JScrollPane();
@@ -444,117 +443,94 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
         buttonCloseHelp = new JButton();
 
         //======== this ========
-        setBackground(Color.black);
+        setOpaque(false);
         setName("this");
-        setLayout(new GridBagLayout());
-        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {0.1, 1.0E-4};
+        setLayout(new BorderLayout());
 
-        //======== panelVideo ========
+        //======== panel1 ========
         {
-            panelVideo.setOpaque(false);
-            panelVideo.setName("panelVideo");
-            panelVideo.setLayout(new BorderLayout());
+            panel1.setOpaque(false);
+            panel1.setBorder(new EmptyBorder(1, 0, 10, 0));
+            panel1.setPreferredSize(new Dimension(100, 48));
+            panel1.setMinimumSize(new Dimension(100, 0));
+            panel1.setName("panel1");
+            panel1.setLayout(new GridBagLayout());
+            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
+            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0};
+            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {0.0, 0.0, 0.0, 1.0, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
 
-            //======== panel1 ========
+            //======== panel2 ========
             {
-                panel1.setOpaque(false);
-                panel1.setBorder(new EmptyBorder(1, 0, 10, 0));
-                panel1.setName("panel1");
-                panel1.setLayout(new GridBagLayout());
-                ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
-                ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0};
-                ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {0.0, 0.0, 0.0, 1.0, 1.0E-4};
-                ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
+                panel2.setOpaque(false);
+                panel2.setName("panel2");
+                panel2.setLayout(new GridBagLayout());
+                ((GridBagLayout)panel2.getLayout()).columnWidths = new int[] {0, 0};
+                ((GridBagLayout)panel2.getLayout()).rowHeights = new int[] {0, 0, 0};
+                ((GridBagLayout)panel2.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+                ((GridBagLayout)panel2.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
 
-                //======== panel2 ========
-                {
-                    panel2.setOpaque(false);
-                    panel2.setName("panel2");
-                    panel2.setLayout(new GridBagLayout());
-                    ((GridBagLayout)panel2.getLayout()).columnWidths = new int[] {0, 0};
-                    ((GridBagLayout)panel2.getLayout()).rowHeights = new int[] {0, 0, 0};
-                    ((GridBagLayout)panel2.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-                    ((GridBagLayout)panel2.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
+                //---- labelTransitionInProgress ----
+                labelTransitionInProgress.setBackground(Color.black);
+                labelTransitionInProgress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                labelTransitionInProgress.setHorizontalAlignment(SwingConstants.LEFT);
+                labelTransitionInProgress.setText("Transition In Progress...");
+                labelTransitionInProgress.setName("labelTransitionInProgress");
+                panel2.add(labelTransitionInProgress, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 5, 0), 0, 0));
 
-                    //---- labelTransitionInProgress ----
-                    labelTransitionInProgress.setBackground(Color.black);
-                    labelTransitionInProgress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                    labelTransitionInProgress.setHorizontalAlignment(SwingConstants.LEFT);
-                    labelTransitionInProgress.setText("Transition In Progress...");
-                    labelTransitionInProgress.setName("labelTransitionInProgress");
-                    panel2.add(labelTransitionInProgress, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                        new Insets(0, 0, 5, 0), 0, 0));
-
-                    //---- labelConnectionStatus ----
-                    labelConnectionStatus.setText("Switcher not connected :(");
-                    labelConnectionStatus.setForeground(Color.red);
-                    labelConnectionStatus.setBackground(Color.black);
-                    labelConnectionStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                    labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
-                    labelConnectionStatus.setName("labelConnectionStatus");
-                    panel2.add(labelConnectionStatus, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
-                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                        new Insets(0, 0, 0, 0), 0, 0));
-                }
-                panel1.add(panel2, new GridBagConstraints(3, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.EAST, GridBagConstraints.VERTICAL,
+                //---- labelConnectionStatus ----
+                labelConnectionStatus.setText("Switcher not connected :(");
+                labelConnectionStatus.setForeground(Color.red);
+                labelConnectionStatus.setBackground(Color.black);
+                labelConnectionStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
+                labelConnectionStatus.setMaximumSize(new Dimension(150, 15));
+                labelConnectionStatus.setName("labelConnectionStatus");
+                panel2.add(labelConnectionStatus, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                     new Insets(0, 0, 0, 0), 0, 0));
-
-                //---- buttonToggleLyrics ----
-                buttonToggleLyrics.setText("Toggle Lyrics");
-                buttonToggleLyrics.setForeground(Color.cyan);
-                buttonToggleLyrics.setBackground(Color.darkGray);
-                buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 20));
-                buttonToggleLyrics.setName("buttonToggleLyrics");
-                panel1.add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 20), 0, 0));
-
-                //---- buttonVolume ----
-                buttonVolume.setText("Volume");
-                buttonVolume.setForeground(Color.cyan);
-                buttonVolume.setBackground(Color.darkGray);
-                buttonVolume.setFont(new Font("Segoe UI", Font.BOLD, 20));
-                buttonVolume.setPreferredSize(new Dimension(120, 40));
-                buttonVolume.setMinimumSize(new Dimension(120, 30));
-                buttonVolume.setName("buttonVolume");
-                panel1.add(buttonVolume, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 20), 0, 0));
-
-                //---- buttonhelp ----
-                buttonhelp.setText("Help");
-                buttonhelp.setForeground(Color.lightGray);
-                buttonhelp.setBackground(Color.black);
-                buttonhelp.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                buttonhelp.setHorizontalAlignment(SwingConstants.CENTER);
-                buttonhelp.setIcon(new ImageIcon(getClass().getResource("/icons/people_connection_32x32.png")));
-                buttonhelp.setName("buttonhelp");
-                panel1.add(buttonhelp, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 20), 0, 0));
             }
-            panelVideo.add(panel1, BorderLayout.NORTH);
+            panel1.add(panel2, new GridBagConstraints(3, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.EAST, GridBagConstraints.VERTICAL,
+                new Insets(0, 0, 0, 0), 0, 0));
 
-            //======== panelVideoMultiview ========
-            {
-                panelVideoMultiview.setOpaque(false);
-                panelVideoMultiview.setName("panelVideoMultiview");
-                panelVideoMultiview.setLayout(new GridBagLayout());
-                ((GridBagLayout)panelVideoMultiview.getLayout()).columnWidths = new int[] {0, 0};
-                ((GridBagLayout)panelVideoMultiview.getLayout()).rowHeights = new int[] {0, 0};
-                ((GridBagLayout)panelVideoMultiview.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-                ((GridBagLayout)panelVideoMultiview.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
-            }
-            panelVideo.add(panelVideoMultiview, BorderLayout.CENTER);
+            //---- buttonToggleLyrics ----
+            buttonToggleLyrics.setText("Toggle Lyrics");
+            buttonToggleLyrics.setForeground(Color.cyan);
+            buttonToggleLyrics.setBackground(Color.darkGray);
+            buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            buttonToggleLyrics.setName("buttonToggleLyrics");
+            panel1.add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 20), 0, 0));
+
+            //---- buttonVolume ----
+            buttonVolume.setText("Volume");
+            buttonVolume.setForeground(Color.cyan);
+            buttonVolume.setBackground(Color.darkGray);
+            buttonVolume.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            buttonVolume.setPreferredSize(new Dimension(120, 40));
+            buttonVolume.setMinimumSize(new Dimension(120, 30));
+            buttonVolume.setName("buttonVolume");
+            panel1.add(buttonVolume, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 20), 0, 0));
+
+            //---- buttonhelp ----
+            buttonhelp.setText("Help");
+            buttonhelp.setForeground(Color.lightGray);
+            buttonhelp.setBackground(Color.black);
+            buttonhelp.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            buttonhelp.setHorizontalAlignment(SwingConstants.CENTER);
+            buttonhelp.setIcon(new ImageIcon(getClass().getResource("/icons/people_connection_32x32.png")));
+            buttonhelp.setName("buttonhelp");
+            panel1.add(buttonhelp, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 20), 0, 0));
         }
-        add(panelVideo, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 0), 0, 0));
+        add(panel1, BorderLayout.NORTH);
 
         //======== dialogHelp ========
         {
@@ -621,13 +597,11 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables  @formatter:off
-    private JPanel panelVideo;
     private JLabel labelTransitionInProgress;
     private JLabel labelConnectionStatus;
     private JButton buttonToggleLyrics;
     private JButton buttonVolume;
     private JButton buttonhelp;
-    private JPanel panelVideoMultiview;
     private JFrame dialogHelp;
     private JTextPane textPaneHelp;
     private JButton buttonCloseHelp;

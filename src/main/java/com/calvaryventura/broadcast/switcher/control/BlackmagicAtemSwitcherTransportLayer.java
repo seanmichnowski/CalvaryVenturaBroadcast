@@ -77,7 +77,7 @@ public class BlackmagicAtemSwitcherTransportLayer
             }
         } catch (Exception e)
         {
-            logger.info("Cannot process packet payload", e);
+            logger.error("Cannot process packet payload", e);
             this.initializationComplete = false; // triggers reinitialize
         }
     }
@@ -100,7 +100,7 @@ public class BlackmagicAtemSwitcherTransportLayer
                 randSessionId, 0, 0, 0, null, initialPayload);
 
         // send first packet, and await the second
-        logger.info("Sending first initialization packet to the switcher");
+        logger.info("Sending first initialization packet to the switcher...");
         this.udpInterface.getReceivedPacketQueue().clear();
         this.udpInterface.sendBlocking(firstPacket);
         final BlackmagicAtemSwitcherPacket poll = this.udpInterface.getReceivedPacketQueue().poll(1, TimeUnit.SECONDS);
@@ -110,7 +110,7 @@ public class BlackmagicAtemSwitcherTransportLayer
         }
 
         // read the incoming packet 2
-        logger.info("Received second packet {}", poll);
+        logger.debug("Received second packet {}", poll);
         if (poll.getRawPayloadBytes().length == 0 || poll.getRawPayloadBytes()[0] != 0x02)
         {
             throw new Exception("Switcher responded with initialization packet 2, but said we were not successful");
@@ -134,7 +134,7 @@ public class BlackmagicAtemSwitcherTransportLayer
             }
 
             // the switcher now responds with the correct sessionID, the random one is no longer valid
-            logger.info("Received switcher state packet: {}", packet);
+            logger.debug("Received switcher state packet: {}", packet);
             if (this.sessionID == -1)
             {
                 this.sessionID = packet.getSessionId();
@@ -149,7 +149,7 @@ public class BlackmagicAtemSwitcherTransportLayer
                 final int remoteSequenceNumber = 0x61; // only time the client sets the remote sequence number field
                 final BlackmagicAtemSwitcherPacket ackPacket = new BlackmagicAtemSwitcherPacket(true, false, false, false, true,
                         this.sessionID, acknowledgementNumber, remoteSequenceNumber, 0, null, new byte[0]);
-                logger.info("Client found the last (empty) packet in the switcher's full status dump. Acknowledging switcher's last status packet...");
+                logger.debug("Client found the last (empty) packet in the switcher's full status dump. Acknowledging switcher's last status packet...");
                 this.udpInterface.sendBlocking(ackPacket);
                 break;
             } else
@@ -158,7 +158,7 @@ public class BlackmagicAtemSwitcherTransportLayer
                 final int acknowledgementNumber = packet.getLocalSequenceNumber();
                 final BlackmagicAtemSwitcherPacket ackPacket = new BlackmagicAtemSwitcherPacket(true, false, false, false, true,
                         this.sessionID, acknowledgementNumber, 0, 0, null, new byte[0]);
-                logger.info("Client acknowledging switcher's status packet...");
+                logger.debug("Client acknowledging switcher's status packet...");
                 this.udpInterface.sendBlocking(ackPacket);
             }
         }
@@ -191,12 +191,12 @@ public class BlackmagicAtemSwitcherTransportLayer
                     this.sessionID, 0, 0, localSeqNum, map, null);
 
             // send the packet
-            logger.info("Sending command '{}', data={}", cmd, DatatypeConverter.printHexBinary(data));
+            logger.debug("Sending command '{}', data={}", cmd, DatatypeConverter.printHexBinary(data));
             this.udpInterface.getReceivedPacketQueue().clear();
             this.udpInterface.sendBlocking(packet);
 
             // receive the ACK/acknowledgement number for the packet we just sent (or throw an exception)
-            logger.info("Received command response: {}", this.waitForAcknowledgementOrThrowEx(localSeqNum));
+            logger.debug("Received command response: {}", this.waitForAcknowledgementOrThrowEx(localSeqNum));
             return true;
         } catch (Exception e)
         {
