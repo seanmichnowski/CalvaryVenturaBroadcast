@@ -13,7 +13,7 @@ new FormModel {
 			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/icons/camera_fullsize.png" )
 			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 				"$columnSpecs": "0:1.0"
-				"$rowSpecs": "0:1.0, 0:1.0"
+				"$rowSpecs": "0:1.0, 0"
 				"$alignTop": true
 				"$alignLeft": true
 				"$hGap": 25
@@ -31,8 +31,9 @@ new FormModel {
 					name: "parentPtzCamerasPanel"
 					"opaque": false
 					"border": new javax.swing.border.EmptyBorder( 0, 0, 0, 0 )
-					"preferredSize": new java.awt.Dimension( 673, 480 )
+					"preferredSize": new java.awt.Dimension( 673, 10 )
 					"minimumSize": new java.awt.Dimension( 0, 0 )
+					"requestFocusEnabled": false
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
 					name: "switcherControlPanel"

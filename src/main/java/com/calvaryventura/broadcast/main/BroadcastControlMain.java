@@ -4,7 +4,10 @@ import java.awt.*;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.*;
 import javax.swing.border.*;
 
@@ -56,15 +59,14 @@ public class BroadcastControlMain extends JFrame
         // UI initialization
         this.initComponents();
         this.setLocationRelativeTo(null);
-        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
         this.setTitle(this.settings.getProgramTitle());
-        this.setVisible(true);
 
-        // make all scroll bars wider so they are easier to grab on a touchscreen
+        // make all scroll bars wider, so they are easier to grab on a touchscreen
         UIManager.put("ScrollBar.width", 30);
 
         // initialize PTZ camera(s)
-        this.settings.getPtzCameraNamesIps().forEach((ptzCameraName, ptzCameraSocketAddress) ->
+        final AtomicInteger ptzCameraIdx = new AtomicInteger(0);
+        this.settings.getPtzCameraNamesIps().forEach((ptzCameraName, ptzCameraSocketAddress) -> // TODO maybe one day combine this getter with "settings.getPtzCameraSwitcherInputIndexes()" so everything can be in one structure from the settings
         {
             // for each PTZ camera, create the controller and create the UI
             final PtzCameraUi ptzCameraUi = new PtzCameraUi(ptzCameraName);
@@ -85,8 +87,8 @@ public class BroadcastControlMain extends JFrame
                 {
                     // attempt to move the camera, also show this camera in the preview window
                     final boolean cameraMoveOk = ptzCameraController.moveToPreset(presetIdx);
-                    switcherCommandSender.setPreviewVideo(settings.getLeftCameraVideoIndex());
-                    SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnLeftRightCameraUis());
+                    switcherCommandSender.setPreviewVideo(settings.getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx.getAndIncrement()));
+                    SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnCameraUis());
                     return cameraMoveOk;
                 }
 
@@ -173,11 +175,11 @@ public class BroadcastControlMain extends JFrame
         this.switcherCommandSender.addConnectionStatusConsumer(videoSwitcherControllerUi::setSwitcherConnectionStatus);
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> {
             videoSwitcherControllerUi.setPreviewSourceStatus(previewIdx);
-            this.updatePreviewProgramColorsOnLeftRightCameraUis(); // reflect on UI when switcher changes its source
+            this.updatePreviewProgramColorsOnCameraUis(); // reflect on UI when switcher changes its source
         });
         this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> {
             videoSwitcherControllerUi.setProgramSourceStatus(programIdx);
-            this.updatePreviewProgramColorsOnLeftRightCameraUis(); // reflect on UI when switcher changes its source
+            this.updatePreviewProgramColorsOnCameraUis(); // reflect on UI when switcher changes its source
         });
 
         // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
@@ -185,6 +187,10 @@ public class BroadcastControlMain extends JFrame
 
         // after UI initialization is done, finally start the connection to the switcher
         this.switcherCommandSender.initialize(settings.getSwitcherIp());
+
+        // finally, show the frame maximized!
+        this.setVisible(true);
+        //this.setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
     /**
@@ -192,7 +198,7 @@ public class BroadcastControlMain extends JFrame
      * updated to reflect the state of the video switcher. This method gets called whenever
      * the switcher goes to a new state, so we can reflect preview/program states on the camera UI's.
      */
-    private void updatePreviewProgramColorsOnLeftRightCameraUis()
+    private void updatePreviewProgramColorsOnCameraUis()
     {
         // pull current preview/program sources
         final int previewIdx = this.switcherCommandSender.getCurrentVideoPreviewIdx();
@@ -237,14 +243,15 @@ public class BroadcastControlMain extends JFrame
             ((GridBagLayout)panelMainContent.getLayout()).columnWidths = new int[] {0, 0};
             ((GridBagLayout)panelMainContent.getLayout()).rowHeights = new int[] {0, 0, 0};
             ((GridBagLayout)panelMainContent.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-            ((GridBagLayout)panelMainContent.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
+            ((GridBagLayout)panelMainContent.getLayout()).rowWeights = new double[] {1.0, 0.0, 1.0E-4};
 
             //======== parentPtzCamerasPanel ========
             {
                 parentPtzCamerasPanel.setOpaque(false);
                 parentPtzCamerasPanel.setBorder(BorderFactory.createEmptyBorder());
-                parentPtzCamerasPanel.setPreferredSize(new Dimension(673, 480));
+                parentPtzCamerasPanel.setPreferredSize(new Dimension(673, 10));
                 parentPtzCamerasPanel.setMinimumSize(new Dimension(0, 0));
+                parentPtzCamerasPanel.setRequestFocusEnabled(false);
                 parentPtzCamerasPanel.setName("parentPtzCamerasPanel");
                 parentPtzCamerasPanel.setLayout(new GridLayout(1, 0, 20, 0));
             }

@@ -202,6 +202,8 @@ public class PtzCameraUi extends JPanel
             new TitledBorder(new LineBorder(Color.magenta, 3, true), "Title", TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
                 new Font("Ubuntu", Font.BOLD, 20), Color.magenta),
             new EmptyBorder(0, 5, 5, 5)));
+        setPreferredSize(new Dimension(324, 100));
+        setMinimumSize(new Dimension(324, 100));
         setName("this");
         setLayout(new GridBagLayout());
         ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0};

@@ -99,8 +99,8 @@ public class BlackmagicAtemSwitcherTransportLayer
         final BlackmagicAtemSwitcherPacket firstPacket = new BlackmagicAtemSwitcherPacket(false, true, false, false, false,
                 randSessionId, 0, 0, 0, null, initialPayload);
 
-        // send first packet, and await the second
-        logger.info("Sending first initialization packet to the switcher...");
+        // send the first packet, and await the second
+        logger.debug("Sending first initialization packet to the switcher...");
         this.udpInterface.getReceivedPacketQueue().clear();
         this.udpInterface.sendBlocking(firstPacket);
         final BlackmagicAtemSwitcherPacket poll = this.udpInterface.getReceivedPacketQueue().poll(1, TimeUnit.SECONDS);

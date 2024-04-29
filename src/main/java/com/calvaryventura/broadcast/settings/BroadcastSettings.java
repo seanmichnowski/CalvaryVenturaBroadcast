@@ -255,19 +255,6 @@ public class BroadcastSettings
         return this.switcherVideoNamesAndIndexes;
     }
 
-    // one day remove calling out specifically left/right cameras, see the broadcast_settings.txt file for a comment there
-    // TODO remove me!!!!
-    public int getLeftCameraVideoIndex()
-    {
-        return this.switcherVideoNamesAndIndexes.get("LEFT");
-    }
-
-    // one day remove calling out specifically left/right cameras, see the broadcast_settings.txt file for a comment there
-    public int getRightCameraVideoIndex()
-    {
-        return this.switcherVideoNamesAndIndexes.get("RIGHT");
-    }
-
     public boolean isVideoSwitcherMultiviewEnabled()
     {
         return videoSwitcherMultiviewEnabled;

@@ -24,8 +24,13 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.ContainerAdapter;
+import java.awt.event.ContainerEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Map;
@@ -110,40 +115,26 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             this.add(errorMessage); // GridBagLayout
         }
 
-        this.videoCanvas.addAncestorListener(new AncestorListener()
+        // create a task which resizes the parent panel based on our videoCanvas's current aspect ratio
+        final Runnable r = () ->
+        {
+            final Dimension videoPlaybackDimensions = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
+            final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
+            final int proposedVideoCanvasHeight = (int) (this.videoCanvas.getWidth() / aspectRatioVideo);
+            final int deltaVideoCanvasHeight = proposedVideoCanvasHeight - this.videoCanvas.getHeight();
+            final Dimension dim = new Dimension(getParent().getWidth(), getParent().getHeight() + deltaVideoCanvasHeight);
+            this.getParent().setPreferredSize(dim);
+            this.getParent().setMinimumSize(dim);
+            this.getParent().setMaximumSize(dim);
+        };
+
+        // run that task whenever the parent window is resized
+        JFrame.getFrames()[0].addComponentListener(new ComponentAdapter()
         {
             @Override
-            public void ancestorAdded(AncestorEvent event)
+            public void componentResized(ComponentEvent e)
             {
-                SwingUtilities.invokeLater(() -> {
-
-// TODO OK I think I need to add a listener on the overall PARENT FRAME on a component resized event.. get the size.. then only then can I resize the height for the multiview panel
-//  that's the only way because it will (1) change as the overall frame is resized and (2) not continuously generate a component event
-                    logger.info("\n\n\n****called 2!?\n\n\n");
-                    // TODO I need to run this to try it
-                    final Dimension videoPlaybackDimensions = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
-                    final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
-
-                    final int proposedVideoCanvasHeight = (int) (videoCanvas.getWidth() / aspectRatioVideo);
-                    final int deltaVideoCanvasHeight = proposedVideoCanvasHeight - videoCanvas.getHeight();
-                    logger.info("Current video canvas height: {} proposed height: {}", videoCanvas.getHeight(), proposedVideoCanvasHeight);
-                    final Dimension dim = new Dimension(getParent().getWidth(), getParent().getHeight() + deltaVideoCanvasHeight);
-                    getParent().setPreferredSize(dim);
-//                getParent().setMinimumSize(dim);
-//                getParent().setMaximumSize(dim);
-                });
-            }
-
-            @Override
-            public void ancestorRemoved(AncestorEvent event)
-            {
-
-            }
-
-            @Override
-            public void ancestorMoved(AncestorEvent event)
-            {
-
+                SwingUtilities.invokeLater(r);
             }
         });
     }
@@ -207,7 +198,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                                 } else if (e.getClickCount() == 2)
                                 {
                                     logger.info("Changing to program video input idx={} name={}", switcherSourceIdx, switcherSourceName);
-                                    // TODO callbacks.onProgramSourceChanged(switcherSourceIdx);
                                     callbacks.onPreviewSourceChanged(switcherSourceIdx);
                                     callbacks.onFadePressed();
                                 }
