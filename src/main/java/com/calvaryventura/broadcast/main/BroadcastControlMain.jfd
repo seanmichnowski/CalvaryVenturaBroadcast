@@ -11,20 +11,13 @@ new FormModel {
 			"background": sfield java.awt.Color black
 			"minimumSize": new java.awt.Dimension( 400, 600 )
 			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/icons/camera_fullsize.png" )
-			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
-				"$columnSpecs": "0:1.0"
-				"$rowSpecs": "0:1.0, 0"
-				"$alignTop": true
-				"$alignLeft": true
-				"$hGap": 25
-				"$vGap": 15
-			} ) {
-				name: "panelMainContent"
+			add( new FormContainer( "javax.swing.JSplitPane", new FormLayoutManager( class javax.swing.JSplitPane ) ) {
+				name: "splitPaneMainContent"
 				"border": new javax.swing.border.EmptyBorder( 5, 0, 5, 0 )
 				"background": sfield java.awt.Color black
-				auxiliary() {
-					"JavaCodeGenerator.variableLocal": true
-				}
+				"orientation": 0
+				"resizeWeight": 0.6
+				"dividerSize": 20
 				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
 					"hgap": 20
 				} ) {
@@ -34,14 +27,16 @@ new FormModel {
 					"preferredSize": new java.awt.Dimension( 673, 10 )
 					"minimumSize": new java.awt.Dimension( 0, 0 )
 					"requestFocusEnabled": false
-				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+				}, new FormLayoutConstraints( class java.lang.String ) {
+					"value": "left"
+				} )
 				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
 					name: "switcherControlPanel"
 					"opaque": false
 					"preferredSize": new java.awt.Dimension( 24, 100 )
 					"minimumSize": new java.awt.Dimension( 24, 0 )
-				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
-					"gridy": 1
+				}, new FormLayoutConstraints( class java.lang.String ) {
+					"value": "right"
 				} )
 			}, new FormLayoutConstraints( class java.lang.String ) {
 				"value": "Center"

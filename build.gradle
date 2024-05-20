@@ -5,7 +5,7 @@ group '1'
 version '1.0-SNAPSHOT'
 sourceCompatibility = 1.8
 
-/**
+/*
  * ***************************************************************************************
  * ***************************** GRADLE EXTERNAL REPOS ***********************************
  * ***************************************************************************************
@@ -23,7 +23,7 @@ repositories {
     mavenCentral()
 }
 
-/**
+/*
  * ***************************************************************************************
  * ****************** ALL PROJECT EXTERNAL DEPENDENCIES LISTED HERE **********************
  * ***************************************************************************************
@@ -32,14 +32,13 @@ repositories {
 dependencies {
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.7'
-    compile 'org.apache.httpcomponents:httpclient:4.5.10'
-    compile 'org.apache.httpcomponents:httpcore:4.4.1'
     compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.1'
-    compile 'uk.co.caprica:vlcj:4.8.2'
+    implementation "com.github.kokorin.jaffree:jaffree:2023.09.10"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7'
 }
 
 
-/**
+/*
  * ***************************************************************************************
  * **************** JAR TASK - create a single Jar with all dependencies *****************
  * ***************************************************************************************

@@ -1,39 +1,59 @@
 package com.calvaryventura.broadcast.switcher.ui.withmultiview;
 
-import java.awt.*;
-import javax.swing.*;
-import javax.swing.border.*;
-
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
 import com.calvaryventura.broadcast.switcher.ui.BroadcastSwitcherUiCallbacks;
 import com.calvaryventura.broadcast.uiwidgets.DragScrollListener;
+import com.github.kokorin.jaffree.LogLevel;
+import com.github.kokorin.jaffree.StreamType;
+import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
+import com.github.kokorin.jaffree.ffmpeg.Frame;
+import com.github.kokorin.jaffree.ffmpeg.FrameConsumer;
+import com.github.kokorin.jaffree.ffmpeg.FrameOutput;
+import com.github.kokorin.jaffree.ffmpeg.Stream;
+import com.github.kokorin.jaffree.ffmpeg.UrlInput;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.caprica.vlcj.player.component.EmbeddedMediaPlayerComponent;
-import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.event.AncestorEvent;
-import javax.swing.event.AncestorListener;
+import javax.swing.JScrollPane;
+import javax.swing.JTextPane;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.ContainerAdapter;
-import java.awt.event.ContainerEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
 /**
@@ -45,9 +65,12 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
 {
     // VLC macros
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final String[] VLC_PLAYBACK_FLAGS = {"--drop-late-frames", "--skip-frames", "--network-caching=500", "--sub-track=0"};
-    private static final String VLC_NOT_INSTALLED_ERROR_MSG = "<html>You must install the program 'VLC' in order" +
-            "<br>to view the multiview screen in real-time.<br>See: <u>https://www.videolan.org/vlc/#download</u></html>";
+    private static final String PATH_ENVIRONMENT_VARIABLE = "PATH";
+    private static final String FFMPEG_INSTALLATION_NAME = "ffmpeg";
+    private static final int FFMPEG_MINIMUM_VERSION = 4;
+    private static final String FFMPEG_NOT_INSTALLED_ERROR_MSG = "<html>You must install the program 'FFMPEG' in order" +
+            "<br>to view the multiview screen in real-time.<br>See: <u>https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/</u>" +
+            "<br>Ensure you have at least FFMPEG version <b>" + FFMPEG_MINIMUM_VERSION + "</b></html>";
 
     // help display contents
     private static final String HELP_TEXT = "<html>Multiview screen available actions:<br><ul>" +
@@ -61,9 +84,10 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             "you don't have to click the \"SET\" button after.</html>";
 
     // local vars
-    private EmbeddedMediaPlayerComponent videoCanvas; // per "https://github.com/caprica/vlcj" declare as a class var so garbage collection doesn't delete stuff inside
-    private EmbeddedMediaPlayer player;               // per "https://github.com/caprica/vlcj" declare as a class var so garbage collection doesn't delete stuff inside
-    private final Rectangle videoPlaybackRectangleWithinVideoCanvas = new Rectangle();
+    private BufferedImage multiviewImage = null;
+    private final JPanel videoCanvasPanel;
+    private final Object multiviewImageDrawLock = new Object();
+    private Future<?> ffmpegBackgroundThread;
 
     /**
      * Creates the basic UI elements and callbacks.
@@ -88,53 +112,174 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             this.dialogHelp.setVisible(true);
         });
 
-        // attempt to initialize the VLC media player library
-        try
+        // create the panel for drawing the multiview buffered image
+        this.videoCanvasPanel = new JPanel(null)
         {
-            this.videoCanvas = new EmbeddedMediaPlayerComponent(VLC_PLAYBACK_FLAGS);
-            this.player = videoCanvas.mediaPlayer();
-        } catch (Throwable ignored)
-        {
-            // VLC is probably not installed
-            this.videoCanvas = null;
-            this.player = null;
-        }
+            @Override
+            public void paintComponent(Graphics g)
+            {
+                paintMultiviewPanel((Graphics2D) g);
+            }
+        };
 
-        // if the VLC initialization succeeded, then add the video canvas to our program
-        if (this.player != null)
+        // if FFMPEG is installed, then add the video canvas to our program
+        if (verifyFfmpegInstallationOnHostComputer())
         {
-            this.initializeMouseSelectionOnMultiviewPanel(this.videoCanvas);
-            this.initializeVlcPlayback(this.videoCanvas);
-            SwingUtilities.invokeLater(() -> this.add(this.videoCanvas)); // GridBagLayout
+            this.add(this.videoCanvasPanel, BorderLayout.CENTER);
+            this.initializeMouseSelectionOnMultiviewPanel(this.videoCanvasPanel);
+            //this.startFfmpegMultiviewVideoDecodeThread(BroadcastSettings.getInst().getVideoSwitcherMultiviewVlcMediaPath(), BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize());
         } else
         {
-            // no VLC installed!
-            final JLabel errorMessage = new JLabel(VLC_NOT_INSTALLED_ERROR_MSG);
+            // no FFMPEG installed!
+            final JLabel errorMessage = new JLabel(FFMPEG_NOT_INSTALLED_ERROR_MSG);
             errorMessage.setForeground(Color.RED);
             errorMessage.setFont(new Font("Arial", Font.BOLD, 20));
             this.add(errorMessage); // GridBagLayout
         }
 
-        // create a task which resizes the parent panel based on our videoCanvas's current aspect ratio
-        final Runnable r = () ->
-        {
-            final Dimension videoPlaybackDimensions = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
-            final double aspectRatioVideo = videoPlaybackDimensions.getWidth() / videoPlaybackDimensions.getHeight();
-            final int proposedVideoCanvasHeight = (int) (this.videoCanvas.getWidth() / aspectRatioVideo);
-            final int deltaVideoCanvasHeight = proposedVideoCanvasHeight - this.videoCanvas.getHeight();
-            final Dimension dim = new Dimension(getParent().getWidth(), getParent().getHeight() + deltaVideoCanvasHeight);
-            this.getParent().setPreferredSize(dim);
-            this.getParent().setMinimumSize(dim);
-            this.getParent().setMaximumSize(dim);
-        };
-
-        // run that task whenever the parent window is resized
-        JFrame.getFrames()[0].addComponentListener(new ComponentAdapter()
+        // listen for resizing the video canvas; each resize must trigger a restart of FFMPEG, since we directly scale the video to the canvas size
+        this.videoCanvasPanel.addComponentListener(new ComponentAdapter()
         {
             @Override
             public void componentResized(ComponentEvent e)
             {
-                SwingUtilities.invokeLater(r);
+                super.componentResized(e);
+                startFfmpegMultiviewVideoDecodeThread(BroadcastSettings.getInst().getVideoSwitcherMultiviewVlcMediaPath(), videoCanvasPanel.getSize());
+            }
+        });
+    }
+
+    /**
+     * Checks the current FFMPEG installation and verifies a correct minimum version.
+     * See local static variables for minimum version and installation location.
+     *
+     * @return indication if FFMPEG is installed AND we have at least the minimum version
+     */
+    private static boolean verifyFfmpegInstallationOnHostComputer()
+    {
+        try
+        {
+            // find executable by name by searching all directories on the host computer's PATH
+            final String absolutePath = Arrays.stream(System.getenv(PATH_ENVIRONMENT_VARIABLE).split(File.pathSeparator))
+                    .map(directory -> new File(directory, FFMPEG_INSTALLATION_NAME))
+                    .filter(file -> file.isFile() && file.canExecute()).findFirst()
+                    .map(File::getAbsolutePath).orElseThrow(() -> new RuntimeException("Cannot locate VLC installation on host computer"));
+
+            // get the ffmpeg version by invoking the program
+            final Process process = Runtime.getRuntime().exec(absolutePath + " -version");
+            try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream())))
+            {
+                // pull the version from the command's output, example: "ffmpeg version 3.4.11-0ubuntu0.1 Copyright (c) 2000-2022 the FFmpeg developers"
+                final String versionStr = in.lines()
+                        .filter(l -> l.toLowerCase().contains("version")).findFirst()
+                        .orElseThrow(() -> new RuntimeException("Cannot find the version of FFMPEG installation at " + absolutePath));
+
+                // for the input string seen above, this would return "3.0.8" as vlcVersion, start and end being 4 and 5 respectively
+                final int versionStrIdxStart = versionStr.indexOf("version");
+                final int versionStrIdxEnd = versionStr.substring(versionStrIdxStart + 8).indexOf(" ");
+                final String vlcVersion = versionStr.substring(versionStrIdxStart + 8, versionStrIdxStart + 8 + versionStrIdxEnd);
+
+                // ensure the version of FFMPEG is at least the minimum version
+                final boolean pass = Integer.parseInt(vlcVersion.substring(0, 1)) >= FFMPEG_MINIMUM_VERSION;
+                logger.info("Installed FFMPEG version: {}... {} (>={})", vlcVersion, pass ? "OK" : "FAIL", FFMPEG_MINIMUM_VERSION);
+                if (!pass)
+                {
+                    logger.info("Current FFMPEG installation: '{}', but we require at least version {} or higher", absolutePath, FFMPEG_MINIMUM_VERSION);
+                }
+                return pass;
+            }
+        } catch (Exception e)
+        {
+            logger.error("Unable to lookup valid FFMPEG installation on host computer: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Paints the multiview image into the local video canvas JPanel {@link #videoCanvasPanel}.
+     * This method gets called automatically as the panel is repainted, only called from
+     * the panel's overridden paint method. We are either painting the current multiview
+     * buffered image, or if it's NULL, a simple message saying we're waiting for it.
+     *
+     * @param g2d graphics handle to the video canvas panel
+     */
+    private void paintMultiviewPanel(Graphics2D g2d)
+    {
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        synchronized (this.multiviewImageDrawLock)
+        {
+            if (this.multiviewImage != null)
+            {
+                g2d.drawImage(this.multiviewImage, null, null);
+            } else
+            {
+                final String message = "Awaiting multiview video decode...";
+                g2d.setFont(new Font("Arial", Font.BOLD, 16));
+                g2d.setColor(Color.WHITE);
+                g2d.drawString(message, 5, this.getHeight() / 4);
+            }
+        }
+    }
+
+    /**
+     * Initialize the FFMPEG decoder to read the incoming RTSP multiview stream. We use the FFMPEG program
+     * directly to scale the output video to exactly the JPanel canvas size. Therefore, we must call this
+     * method again each time the playback canvas gets resized.
+     *
+     * @param rtspConnectionUrl RTSP address of the multiview stream, coming from the external encoder
+     * @param videoCanvasSize   desired output size for the playing video
+     */
+    private void startFfmpegMultiviewVideoDecodeThread(String rtspConnectionUrl, Dimension videoCanvasSize)
+    {
+        if (this.ffmpegBackgroundThread != null)
+        {
+            this.ffmpegBackgroundThread.cancel(true);
+            this.ffmpegBackgroundThread = null;
+        }
+        this.ffmpegBackgroundThread = Executors.newSingleThreadExecutor().submit(() -> {
+            try
+            {
+                final FFmpeg fFmpeg = FFmpeg.atPath().addInput(UrlInput.fromUrl(rtspConnectionUrl))
+                        .addOutput(FrameOutput.withConsumer(
+                                        new FrameConsumer()
+                                        {
+                                            @Override
+                                            public void consumeStreams(List<Stream> streams)
+                                            {
+                                            }
+
+                                            @Override
+                                            public void consume(Frame frame)
+                                            {
+                                                synchronized (multiviewImageDrawLock)
+                                                {
+                                                    multiviewImage = frame == null ? null : frame.getImage(); // check for end-of-stream
+                                                }
+                                                videoCanvasPanel.repaint();
+                                            }
+                                        })
+                                .setFrameRate(20)
+                                .disableStream(StreamType.AUDIO)
+                                .disableStream(StreamType.SUBTITLE)
+                                .disableStream(StreamType.DATA))
+                        .setProgressListener(progress -> logger.info(progress.toString()))
+                        .setLogLevel(LogLevel.WARNING)
+                        .addArguments("-vf", String.format("scale=%d:%d", videoCanvasSize.width, videoCanvasSize.height))
+                        .addArgument("-xerror")
+                        .addArguments("-probesize", "32")
+                        .addArguments("-movflags", "faststart")
+                        .addArguments("-rtbufsize", "0")
+                        .addArguments("-fflags", "nobuffer");
+                logger.info("Starting FFMPEG background thread to decode multiview RTSP stream...");
+                fFmpeg.execute();
+            } catch (Throwable e)
+            {
+                // null-out the multiview image
+                logger.info("Fatal FFMPEG error", e);
+                synchronized (this.multiviewImageDrawLock)
+                {
+                    this.multiviewImage = null;
+                }
             }
         });
     }
@@ -149,27 +294,16 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
      * occurred, based on the divisions specified in the config file. Then we map an X/Y box to a video source,
      * and finally perform the appropriate action on that video source/box being selected.
      */
-    private void initializeMouseSelectionOnMultiviewPanel(EmbeddedMediaPlayerComponent videoCanvas)
+    private void initializeMouseSelectionOnMultiviewPanel(JPanel videoCanvas)
     {
-        videoCanvas.videoSurfaceComponent().addMouseListener(new MouseAdapter()
+        videoCanvas.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mousePressed(MouseEvent e)
             {
-                super.mousePressed(e);
-
-                // Now, we had previously calculated a rectangle of pixels representing the playing video WITHIN the parent canvas.
-                // Since we are listening to mouse events on the parent canvas, we can take the X/Y coordinates of the mouse press,
-                // and compare them to the inscribed video playback rectangle, and find a percentage that the mouse lies WITHIN the rectangle.
-                final double xPercent = (e.getX() - videoPlaybackRectangleWithinVideoCanvas.getMinX()) / videoPlaybackRectangleWithinVideoCanvas.getWidth();
-                final double yPercent = (e.getY() - videoPlaybackRectangleWithinVideoCanvas.getMinY()) / videoPlaybackRectangleWithinVideoCanvas.getHeight();
-                if (xPercent < 0 || xPercent > 1.0 || yPercent < 0 || yPercent > 1.0)
-                {
-                    // the mouse press lies outside the inscribed rectangle
-                    return;
-                }
-
                 // based on the mouse percent INTO the playing video's rectangle, determine which grid box WITHIN the video we clicked inside (starts at 0 for X and Y and referenced from the upper-left corner)
+                final double xPercent = (double) e.getX() / videoCanvas.getWidth();
+                final double yPercent = (double) e.getY() / videoCanvas.getHeight();
                 final int xGridBoxMouseLoc = (int) (xPercent * settings.getVideoSwitcherMultiviewNumColumnDivisions());
                 final int yGridBoxMouseLoc = (int) (yPercent * settings.getVideoSwitcherMultiviewNumRowDivisions());
                 final Point mouseClickGridBox = new Point(xGridBoxMouseLoc, yGridBoxMouseLoc);
@@ -205,105 +339,6 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
                 }
             }
         });
-    }
-
-    /**
-     * We must wait until the video canvas is actually showing on the screen before playing with VLC.
-     * To do this, wait on the "ancestorAdded" event from the video canvas, then configure playback.
-     * When we receive the event that video playback has started, now we are able to pull the video's
-     * height and width bounds. Use these to determine the overall GUI display rectangle the video occupies.
-     *
-     * @param videoCanvas media player panel which will house the playback video
-     */
-    public void initializeVlcPlayback(EmbeddedMediaPlayerComponent videoCanvas)
-    {
-        videoCanvas.addAncestorListener(new AncestorListener()
-        {
-            @Override
-            public void ancestorAdded(AncestorEvent event)
-            {
-                // whenever the video playback canvas changes size, update the processing to find the boundaries of the video
-                videoCanvas.addComponentListener(new ComponentAdapter()
-                {
-                    @Override
-                    public void componentResized(ComponentEvent e)
-                    {
-                        super.componentResized(e);
-                        videoCanvasRectangleResized(e.getComponent().getSize());
-                    }
-                });
-
-                // after the video canvas is showing, we can begin playback
-                player.media().play(settings.getVideoSwitcherMultiviewVlcMediaPath());
-
-
-/*
-                // TODO try better media streaming...
-                // https://stackoverflow.com/questions/71304226/how-to-receive-mpegts-multicast-steam-on-vlc
-                // DJ is right, latency is going to be dependent on nearly everything. However, I am finding that latency of some formats can be reduced to unnoticable levels, "unnoticable" being roughly 100-200ms. I am having good luck with MPEG-2 TS via UDP multicast with encoding rates ~3-4K.
-                //However, I am not having much luck with MPEG-4 via RTSP. I can get latency down to 500-600ms by hammering on caching values, but after a day of poking at settings I am unable to do much better than that on either OS X or XP. There is a cache somewhere in the process that either I have missed, or can't be reduced through the GUI or command line.
-                // TODO add buttons for setting AUX source and also maybe a fade transition T-bar
- */
-            }
-
-            @Override
-            public void ancestorRemoved(AncestorEvent event)
-            {
-            }
-
-            @Override
-            public void ancestorMoved(AncestorEvent event)
-            {
-            }
-        });
-    }
-
-    /**
-     * Call this whenever the parent video canvas is resized. The video canvas has a certain size (WxH), but the video
-     * playing WITHIN this canvas might be (will be) scaled to fit the canvas. The playing video's aspect ratio will
-     * remain constant, and at least one dimension (width or height) will be scaled to touch and perfectly fit the
-     * size of the parent video canvas. So this method attempts to account for the scaling and determine the rectangle
-     * of pixels WITHIN the parent video canvas where the ACTUAL VIDEO IS FOUND. It populates {@link #videoPlaybackRectangleWithinVideoCanvas}.
-     * <p>
-     * We might be a pixel or two off on the edges, but that's OK since we use the rectangle to register mouse events
-     * and determine WHERE in the playing video we are clicking.
-     *
-     * @param videoCanvasSize this is the size of the canvas playing the actual video and WILL change as the parent program is resized
-     */
-    private void videoCanvasRectangleResized(Dimension videoCanvasSize)
-    {
-        // the actual size of the playing video and NEVER changes (for example, WxH 480x360 or 1920x1080 etc.)
-        final Dimension videoPlaybackSize = BroadcastSettings.getInst().getVideoSwitcherMultiviewVideoSize();
-
-        // aspect ratio is the width divided by the height, find for both the parent canvas and the playing video
-        final double aspectRatioCanvas = videoCanvasSize.getWidth() / videoCanvasSize.getHeight();
-        final double aspectRatioVideo = videoPlaybackSize.getWidth() / videoPlaybackSize.getHeight();
-        logger.debug("Aspect ratio of playing multiview video: {}", aspectRatioVideo);
-
-        // compare the aspect ratios
-        final double width;
-        final double height;
-        if (aspectRatioCanvas > aspectRatioVideo)
-        {
-            // the parent canvas is WIDER than the playing video
-            width = videoCanvasSize.getWidth() * aspectRatioVideo / aspectRatioCanvas;
-            height = videoCanvasSize.getHeight();
-        } else if (aspectRatioCanvas < aspectRatioVideo)
-        {
-            // the parent canvas is TALLER than the playing video
-            width = videoCanvasSize.getWidth();
-            height = videoCanvasSize.getHeight() * aspectRatioCanvas / aspectRatioVideo;
-        } else
-        {
-            // the parent canvas is equivalent to the playing video
-            width = videoCanvasSize.getWidth();
-            height = videoCanvasSize.getHeight();
-        }
-
-        // center the newly calculated video size into a rectangle centered within the parent canvas
-        final double startX = videoCanvasSize.getWidth() / 2 - width / 2;
-        final double startY = videoCanvasSize.getHeight() / 2 - height / 2;
-        this.videoPlaybackRectangleWithinVideoCanvas.setBounds((int) startX, (int) startY, (int) width, (int) height);
     }
 
     /**

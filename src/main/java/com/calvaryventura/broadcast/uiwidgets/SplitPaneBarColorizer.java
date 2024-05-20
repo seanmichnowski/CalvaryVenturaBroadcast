@@ -15,6 +15,8 @@ import java.awt.Graphics2D;
  */
 public class SplitPaneBarColorizer
 {
+    private static final int VERTICAL_GAP_PIX_AROUND_SPLIT_PANE_BAR = 5;
+
     /**
      * Simple utility for showing a striped split pane bar instead of the usual boring one.
      *
@@ -39,7 +41,7 @@ public class SplitPaneBarColorizer
                     public void paint(Graphics g)
                     {
                         ((Graphics2D) g).setPaint(new GradientPaint(5, 15, color.darker().darker(), 10, 2, Color.black, true));
-                        g.fillRect(0, 0, getSize().width, getSize().height);
+                        g.fillRect(0, VERTICAL_GAP_PIX_AROUND_SPLIT_PANE_BAR, getSize().width, getSize().height - 2 * VERTICAL_GAP_PIX_AROUND_SPLIT_PANE_BAR);
                         super.paint(g);
                     }
                 };

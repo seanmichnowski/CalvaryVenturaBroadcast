@@ -99,16 +99,18 @@ public class PtzCameraUiItem extends JPanel implements Serializable
     public void onPresetCalledClicked(Callable<Boolean> presetCalledAction)
     {
         this.buttonGoTo.addActionListener(e -> {
-            try
-            {
-                this.buttonGoTo.setEnabled(false); // grey out
-                presetCalledAction.call();         // attempt to move the camera
-                this.buttonGoTo.setEnabled(true);  // reenable
-            } catch (Exception ex)
-            {
-                this.buttonGoTo.setEnabled(true);
-                System.out.printf("Cannot move camera! Error=%s\n", ex.getMessage());
-            }
+            Executors.newSingleThreadExecutor().submit(() -> { // TODO rework this.. needed to have this to keep OFF the EDT since we update the multiview now on the EDT....
+                try
+                {
+                    this.buttonGoTo.setEnabled(false); // grey out
+                    presetCalledAction.call();         // attempt to move the camera
+                    this.buttonGoTo.setEnabled(true);  // reenable
+                } catch (Exception ex)
+                {
+                    this.buttonGoTo.setEnabled(true);
+                    System.out.printf("Cannot move camera! Error=%s\n", ex.getMessage());
+                }
+            });
         });
     }
 
