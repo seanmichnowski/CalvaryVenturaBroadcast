@@ -33,8 +33,8 @@ dependencies {
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.7'
     compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.1'
-    implementation "com.github.kokorin.jaffree:jaffree:2023.09.10"
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7'
+    compile "com.github.kokorin.jaffree:jaffree:2023.09.10"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7' // TODO needed???
 }
 
 

@@ -45,11 +45,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -65,12 +63,11 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
 {
     // VLC macros
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final String PATH_ENVIRONMENT_VARIABLE = "PATH";
     private static final String FFMPEG_INSTALLATION_NAME = "ffmpeg";
-    private static final int FFMPEG_MINIMUM_VERSION = 4;
+    private static final int FFMPEG_REQUIRED_VERSION = 4; // the Jaffree FFMPEG interface uses version 4 only on Windows (Linux seems to work with >= 4)
     private static final String FFMPEG_NOT_INSTALLED_ERROR_MSG = "<html>You must install the program 'FFMPEG' in order" +
             "<br>to view the multiview screen in real-time.<br>See: <u>https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/</u>" +
-            "<br>Ensure you have at least FFMPEG version <b>" + FFMPEG_MINIMUM_VERSION + "</b></html>";
+            "<br>Ensure you have at least FFMPEG version <b>" + FFMPEG_REQUIRED_VERSION + "</b></html>";
 
     // help display contents
     private static final String HELP_TEXT = "<html>Multiview screen available actions:<br><ul>" +
@@ -159,32 +156,26 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     {
         try
         {
-            // find executable by name by searching all directories on the host computer's PATH
-            final String absolutePath = Arrays.stream(System.getenv(PATH_ENVIRONMENT_VARIABLE).split(File.pathSeparator))
-                    .map(directory -> new File(directory, FFMPEG_INSTALLATION_NAME))
-                    .filter(file -> file.isFile() && file.canExecute()).findFirst()
-                    .map(File::getAbsolutePath).orElseThrow(() -> new RuntimeException("Cannot locate VLC installation on host computer"));
-
             // get the ffmpeg version by invoking the program
-            final Process process = Runtime.getRuntime().exec(absolutePath + " -version");
+            final Process process = Runtime.getRuntime().exec(FFMPEG_INSTALLATION_NAME + " -version");
             try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream())))
             {
                 // pull the version from the command's output, example: "ffmpeg version 3.4.11-0ubuntu0.1 Copyright (c) 2000-2022 the FFmpeg developers"
                 final String versionStr = in.lines()
                         .filter(l -> l.toLowerCase().contains("version")).findFirst()
-                        .orElseThrow(() -> new RuntimeException("Cannot find the version of FFMPEG installation at " + absolutePath));
+                        .orElseThrow(() -> new RuntimeException("Cannot find the version of FFMPEG installation on host computer's PATH"));
 
-                // for the input string seen above, this would return "3.0.8" as vlcVersion, start and end being 4 and 5 respectively
+                // for the input string seen above, this would return "3.4.11" for the version, start and end being 4 and 5 respectively
                 final int versionStrIdxStart = versionStr.indexOf("version");
                 final int versionStrIdxEnd = versionStr.substring(versionStrIdxStart + 8).indexOf(" ");
-                final String vlcVersion = versionStr.substring(versionStrIdxStart + 8, versionStrIdxStart + 8 + versionStrIdxEnd);
+                final String currentVersion = versionStr.substring(versionStrIdxStart + 8, versionStrIdxStart + 8 + versionStrIdxEnd);
 
-                // ensure the version of FFMPEG is at least the minimum version
-                final boolean pass = Integer.parseInt(vlcVersion.substring(0, 1)) >= FFMPEG_MINIMUM_VERSION;
-                logger.info("Installed FFMPEG version: {}... {} (>={})", vlcVersion, pass ? "OK" : "FAIL", FFMPEG_MINIMUM_VERSION);
+                // ensure the version of FFMPEG is the required version
+                final boolean pass = Integer.parseInt(currentVersion.substring(0, 1)) == FFMPEG_REQUIRED_VERSION;
+                logger.info("Installed FFMPEG version: {}... {} (must have version: {})", currentVersion, pass ? "OK" : "FAIL", FFMPEG_REQUIRED_VERSION);
                 if (!pass)
                 {
-                    logger.info("Current FFMPEG installation: '{}', but we require at least version {} or higher", absolutePath, FFMPEG_MINIMUM_VERSION);
+                    logger.info("We require FFMPEG version {}", FFMPEG_REQUIRED_VERSION);
                 }
                 return pass;
             }
