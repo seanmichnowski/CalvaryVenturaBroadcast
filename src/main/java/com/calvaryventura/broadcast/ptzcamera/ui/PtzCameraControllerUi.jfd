@@ -1,0 +1,198 @@
+JFDML JFormDesigner: "8.0.3.0.246" Java: "17.0.6" encoding: "UTF-8"
+
+new FormModel {
+	contentType: "form/swing"
+	root: new FormRoot {
+		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+			"$columnSpecs": "0:1.0, 0, 140"
+			"$rowSpecs": "0:1.0"
+			"$hGap": 10
+			"$vGap": 5
+			"$alignTop": true
+			"$alignLeft": true
+		} ) {
+			name: "this"
+			"background": sfield java.awt.Color black
+			"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+			"preferredSize": new java.awt.Dimension( 324, 100 )
+			"minimumSize": new java.awt.Dimension( 324, 100 )
+			add( new FormContainer( "javax.swing.JScrollPane", new FormLayoutManager( class javax.swing.JScrollPane ) ) {
+				name: "scrollPane1"
+				"horizontalScrollBarPolicy": 31
+				"verticalScrollBarPolicy": 21
+				"opaque": false
+				"background": sfield java.awt.Color black
+				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+				auxiliary() {
+					"JavaCodeGenerator.variableLocal": true
+				}
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) ) {
+					name: "panelPresetsHolder"
+					"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+					"background": sfield java.awt.Color black
+				} )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+			add( new FormComponent( "javax.swing.JSeparator" ) {
+				name: "separator1"
+				"orientation": 1
+				"minimumSize": new java.awt.Dimension( 2, 1 )
+				"opaque": true
+				"requestFocusEnabled": false
+				"verifyInputWhenFocusTarget": false
+				"foreground": new java.awt.Color( 255, 0, 255, 255 )
+				"preferredSize": new java.awt.Dimension( 2, 0 )
+				auxiliary() {
+					"JavaCodeGenerator.variableLocal": true
+				}
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+				"gridx": 1
+				"hAlign": 0
+			} )
+			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+				"$columnSpecs": "0:1.0"
+				"$rowSpecs": "0, 0, 0:1.0, 0, 0, 0, 0, 0"
+				"$hGap": 7
+				"$vGap": 10
+				"$alignTop": true
+				"$alignLeft": true
+			} ) {
+				name: "panel1"
+				"opaque": false
+				"border": new javax.swing.border.EmptyBorder( 0, 5, 0, 0 )
+				auxiliary() {
+					"JavaCodeGenerator.variableLocal": true
+				}
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+					"$columnSpecs": "0:1.0, 0"
+					"$rowSpecs": "0:1.0"
+					"$hGap": 7
+					"$vGap": 10
+					"$alignTop": true
+					"$alignLeft": true
+				} ) {
+					name: "panel3"
+					"opaque": false
+					auxiliary() {
+						"JavaCodeGenerator.variableLocal": true
+					}
+					add( new FormComponent( "javax.swing.JLabel" ) {
+						name: "labelConnectionStatus2"
+						"text": "<html><u>Select Camera for which<br>to add new preset:</u></html>"
+						"foreground": sfield java.awt.Color green
+						"background": sfield java.awt.Color black
+						"font": &Font0 new java.awt.Font( "Segoe UI", 1, 16 )
+						"horizontalAlignment": 2
+						"horizontalTextPosition": 2
+						"verticalAlignment": 3
+					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+					add( new FormComponent( "javax.swing.JButton" ) {
+						name: "buttonAddNewPreset"
+						"icon": new com.jformdesigner.model.SwingIcon( 0, "/icons/plus_green_32h.png" )
+						"font": &Font1 new java.awt.Font( "Segoe UI", 1, 16 )
+						"horizontalTextPosition": 10
+						"foreground": sfield java.awt.Color green
+						"preferredSize": new java.awt.Dimension( 40, 40 )
+						"minimumSize": new java.awt.Dimension( 40, 40 )
+						"maximumSize": &Dimension0 new java.awt.Dimension( 100, 30 )
+						"background": sfield java.awt.Color darkGray
+						"iconTextGap": 6
+					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+						"gridx": 1
+					} )
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+				add( new FormComponent( "javax.swing.JComboBox" ) {
+					name: "comboBoxCameraNames"
+					"model": new javax.swing.DefaultComboBoxModel {
+						selectedItem: " "
+						addElement( " " )
+					}
+					"foreground": sfield java.awt.Color white
+					"background": sfield java.awt.Color black
+					"font": new java.awt.Font( "Ubuntu", 1, 18 )
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 1
+				} )
+				add( new FormComponent( "javax.swing.JSeparator" ) {
+					name: "separator2"
+					"foreground": sfield java.awt.Color magenta
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 3
+					"vAlign": 0
+				} )
+				add( new FormComponent( "javax.swing.JLabel" ) {
+					name: "labelPresetEditStatus"
+					"text": "<html><u>Currently Editing Preset:</u><br>[Nothing selected]</html>"
+					"foreground": sfield java.awt.Color green
+					"background": sfield java.awt.Color black
+					"font": #Font0
+					"horizontalAlignment": 2
+					"horizontalTextPosition": 2
+					"verticalAlignment": 3
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 4
+				} )
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
+					"hgap": 10
+				} ) {
+					name: "panel2"
+					"opaque": false
+					"preferredSize": new java.awt.Dimension( 100, 40 )
+					"minimumSize": new java.awt.Dimension( 100, 40 )
+					auxiliary() {
+						"JavaCodeGenerator.variableLocal": true
+					}
+					add( new FormComponent( "javax.swing.JButton" ) {
+						name: "buttonSaveEdits"
+						"icon": new com.jformdesigner.model.SwingIcon( 0, "/icons/orange_location_flag_24x24.png" )
+						"text": "<html>SAVE<br>EDITS</html>"
+						"font": #Font1
+						"horizontalTextPosition": 10
+						"foreground": new java.awt.Color( 204, 102, 0, 255 )
+						"preferredSize": new java.awt.Dimension( 100, 34 )
+						"minimumSize": new java.awt.Dimension( 100, 34 )
+						"maximumSize": #Dimension0
+						"background": sfield java.awt.Color darkGray
+						"iconTextGap": 2
+						"enabled": false
+					} )
+					add( new FormComponent( "javax.swing.JButton" ) {
+						name: "buttonDeletePreset"
+						"icon": new com.jformdesigner.model.SwingIcon( 0, "/icons/red_circle_32x32.png" )
+						"text": "<html>DELETE<br>PRESET</html>"
+						"font": #Font1
+						"horizontalTextPosition": 10
+						"foreground": sfield java.awt.Color red
+						"preferredSize": new java.awt.Dimension( 200, 40 )
+						"minimumSize": new java.awt.Dimension( 150, 40 )
+						"maximumSize": #Dimension0
+						"background": sfield java.awt.Color darkGray
+						"iconTextGap": 2
+						"enabled": false
+					} )
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 5
+				} )
+				add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi" ) {
+					name: "directionalSwipePanel"
+					"minimumSize": new java.awt.Dimension( 300, 150 )
+					"preferredSize": new java.awt.Dimension( 300, 150 )
+					"displayMessage": "PAN & TILT"
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 6
+				} )
+				add( new FormComponent( "com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi" ) {
+					name: "zoomSlider"
+					"minimumSize": new java.awt.Dimension( 300, 45 )
+					"preferredSize": new java.awt.Dimension( 300, 45 )
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 7
+				} )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+				"gridx": 2
+			} )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 0, 0 )
+			"size": new java.awt.Dimension( 605, 710 )
+		} )
+	}
+}

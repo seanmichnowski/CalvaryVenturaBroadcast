@@ -18,9 +18,7 @@ new FormModel {
 				"orientation": 0
 				"resizeWeight": 0.6
 				"dividerSize": 20
-				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
-					"hgap": 20
-				} ) {
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.BorderLayout ) ) {
 					name: "parentPtzCamerasPanel"
 					"opaque": false
 					"border": new javax.swing.border.EmptyBorder( 0, 0, 0, 0 )

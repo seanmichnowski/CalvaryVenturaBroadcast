@@ -205,6 +205,8 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             } else
             {
                 final String message = "Awaiting multiview video decode...";
+                g2d.setColor(Color.BLACK);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
                 g2d.setFont(new Font("Arial", Font.BOLD, 16));
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(message, 5, this.getHeight() / 4);

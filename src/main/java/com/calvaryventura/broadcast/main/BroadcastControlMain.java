@@ -10,8 +10,8 @@ import javax.swing.*;
 import javax.swing.border.*;
 
 import com.calvaryventura.broadcast.ptzcamera.control.PtzCameraController;
-import com.calvaryventura.broadcast.ptzcamera.ui.IPtzCameraUiCallbacks;
-import com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraUi;
+import com.calvaryventura.broadcast.ptzcamera.ui.IPtzCameraControllerUiCallback;
+import com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraControllerUi;
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
 import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
@@ -34,8 +34,9 @@ public class BroadcastControlMain extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
-    private final List<PtzCameraUi> ptzCameraUis = new ArrayList<>();
-    private final BroadcastSettings settings;
+    private final List<PtzCameraController> ptzCameraControllers = new ArrayList<>();
+    private final PtzCameraControllerUi ptzCameraUi;
+
 
     /**
      * Main entry point for application.
@@ -52,71 +53,63 @@ public class BroadcastControlMain extends JFrame
      */
     private BroadcastControlMain()
     {
-        // read the settings file
-        this.settings = BroadcastSettings.getInst();
-
         // UI initialization
         this.initComponents();
         this.setLocationRelativeTo(null);
-        this.setTitle(this.settings.getProgramTitle());
+        this.setTitle(BroadcastSettings.getInst().getProgramTitle());
         SplitPaneBarColorizer.setSplitPaneBarStriped(this.splitPaneMainContent, Color.GREEN);
 
         // make all scroll bars wider, so they are easier to grab on a touchscreen
         UIManager.put("ScrollBar.width", 30);
 
-        // initialize PTZ camera(s)
-        final AtomicInteger ptzCameraIdxGenerator = new AtomicInteger(0);
-        this.settings.getPtzCameraNamesIps().forEach((ptzCameraName, ptzCameraSocketAddress) -> // TODO maybe one day combine this getter with "settings.getPtzCameraSwitcherInputIndexes()" so everything can be in one structure from the settings
+        // connect LEFT camera UI panel actions
+        final IPtzCameraControllerUiCallback ptzCameraUiCallback = new IPtzCameraControllerUiCallback()
+        {
+            @Override
+            public boolean setPressed(int ptzCameraIdx, int presetIdx)
+            {
+                return ptzCameraControllers.get(ptzCameraIdx).savePreset(presetIdx);
+            }
+
+            @Override
+            public boolean callPressed(int ptzCameraIdx, int presetIdx)
+            {
+                // attempt to move the camera, also show this camera in the preview window
+                final boolean cameraMoveOk = ptzCameraControllers.get(ptzCameraIdx).moveToPreset(presetIdx);
+                switcherCommandSender.setPreviewVideo(BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx));
+                SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnCameraUis());
+                return cameraMoveOk;
+            }
+
+            @Override
+            public boolean panTilt(int ptzCameraIdx, double pan, double tilt)
+            {
+                return ptzCameraControllers.get(ptzCameraIdx).panAndTilt(pan, tilt);
+            }
+
+            @Override
+            public boolean zoom(int ptzCameraIdx, double zoom)
+            {
+                return ptzCameraControllers.get(ptzCameraIdx).changeZoom(zoom);
+            }
+        };
+
+        // create the camera control UI and add it to the main GUI
+        this.ptzCameraUi = new PtzCameraControllerUi(new ArrayList<>(BroadcastSettings.getInst().getPtzCameraNamesIps().keySet()), ptzCameraUiCallback);
+        this.ptzCameraUi.setBorder(TitledBorderCreator.createTitledBorder("Camera Presets"));
+        this.parentPtzCamerasPanel.add(this.ptzCameraUi, BorderLayout.CENTER);
+
+        // initialize PTZ camera(s) callbacks
+        final AtomicInteger ptzCameraControllerIdx = new AtomicInteger(0);
+        BroadcastSettings.getInst().getPtzCameraNamesIps().forEach((ptzCameraName, ptzCameraSocketAddress) -> // TODO maybe one day combine this getter with "settings.getPtzCameraSwitcherInputIndexes()" so everything can be in one structure from the settings
         {
             // for each PTZ camera, create the controller and create the UI
-            final PtzCameraUi ptzCameraUi = new PtzCameraUi(ptzCameraName);
-            final PtzCameraController ptzCameraController = new PtzCameraController(ptzCameraName, ptzCameraSocketAddress, ptzCameraUi::setCameraConnectionStatus);
-            this.ptzCameraUis.add(ptzCameraUi);
-            final int ptzCameraIdx = ptzCameraIdxGenerator.getAndIncrement(); // TODO see TODO above...
-
-            // connect LEFT camera UI panel actions
-            ptzCameraUi.setCallback(new IPtzCameraUiCallbacks()
-            {
-                @Override
-                public boolean setPressed(int presetIdx)
-                {
-                    return ptzCameraController.savePreset(presetIdx);
-                }
-
-                @Override
-                public boolean callPressed(int presetIdx)
-                {
-                    // attempt to move the camera, also show this camera in the preview window
-                    final boolean cameraMoveOk = ptzCameraController.moveToPreset(presetIdx);
-                    switcherCommandSender.setPreviewVideo(settings.getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx));
-                    SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnCameraUis());
-                    return cameraMoveOk;
-                }
-
-                @Override
-                public boolean panTilt(double pan, double tilt)
-                {
-                    return ptzCameraController.panAndTilt(pan, tilt);
-                }
-
-                @Override
-                public boolean zoom(double zoom)
-                {
-                    return ptzCameraController.changeZoom(zoom);
-                }
-            });
-
-            // load presets for the camera's UI
-            ptzCameraUi.loadPresetsSavedToDisk();
+            ptzCameraControllers.add(new PtzCameraController(ptzCameraName, ptzCameraSocketAddress, conn -> this.ptzCameraUi.setCameraConnectionStatus(ptzCameraName, conn)));
         });
 
-        // add all PTZ camera UI panels we just created to the parent panel
-        this.ptzCameraUis.forEach(ui -> this.parentPtzCamerasPanel.add(ui));
-        this.parentPtzCamerasPanel.revalidate();
-
         // set up the video switcher control UI implementation
-        logger.info("Starting connection to video switcher, multiview={}", this.settings.isVideoSwitcherMultiviewEnabled() ? "enabled" : "disabled");
-        final AbstractBroadcastSwitcherUi videoSwitcherControllerUi = this.settings.isVideoSwitcherMultiviewEnabled()
+        logger.info("Starting connection to video switcher, multiview={}", BroadcastSettings.getInst().isVideoSwitcherMultiviewEnabled() ? "enabled" : "disabled");
+        final AbstractBroadcastSwitcherUi videoSwitcherControllerUi = BroadcastSettings.getInst().isVideoSwitcherMultiviewEnabled()
                 ? new BroadcastSwitcherMultiviewControlPanelUi() : new BroadcastSwitcherControlPanelUi();
         this.switcherControlPanel.add(videoSwitcherControllerUi, BorderLayout.CENTER);
         this.switcherControlPanel.setBorder(TitledBorderCreator.createTitledBorder("Video Switcher"));
@@ -184,10 +177,10 @@ public class BroadcastControlMain extends JFrame
         });
 
         // for each of the video source inputs ([name, index] repeated for each input) create corresponding program and preview buttons
-        videoSwitcherControllerUi.setVideoSourceNamesAndSwitcherIndexes(settings.getSwitcherVideoNamesAndIndexes());
+        videoSwitcherControllerUi.setVideoSourceNamesAndSwitcherIndexes(BroadcastSettings.getInst().getSwitcherVideoNamesAndIndexes());
 
         // after UI initialization is done, finally start the connection to the switcher
-        this.switcherCommandSender.initialize(settings.getSwitcherIp());
+        this.switcherCommandSender.initialize(BroadcastSettings.getInst().getSwitcherIp());
 
         // finally, show the frame maximized!
         this.setVisible(true);
@@ -206,11 +199,10 @@ public class BroadcastControlMain extends JFrame
         final int programIdx = this.switcherCommandSender.getCurrentVideoProgramIdx();
 
         // update all PTZ camera UI panels to potentially show the current video switcher's PREVIEW/PROGRAM state
-        for (int i = 0; i < this.ptzCameraUis.size(); i++)
-        {
-            final int videoSwitcherInputIdxForThisPtzCamera = this.settings.getPtzCameraSwitcherInputIndexes().get(i);
-            this.ptzCameraUis.get(i).setActivePresetBackgroundColor(programIdx == videoSwitcherInputIdxForThisPtzCamera ? Color.RED : previewIdx == videoSwitcherInputIdxForThisPtzCamera ? Color.GREEN : null);
-        }
+        // TODO think about this a little more....
+        //final int videoSwitcherInputIdxForThisPtzCamera = BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(i);
+        //this.ptzCameraUi.setActivePreviewSelection(BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(previewIdx), this.);
+        //this.ptzCameraUi.setActivePresetBackgroundColor(programIdx == videoSwitcherInputIdxForThisPtzCamera ? Color.RED : previewIdx == videoSwitcherInputIdxForThisPtzCamera ? Color.GREEN : null);
     }
 
     /**
@@ -252,7 +244,7 @@ public class BroadcastControlMain extends JFrame
                 parentPtzCamerasPanel.setMinimumSize(new Dimension(0, 0));
                 parentPtzCamerasPanel.setRequestFocusEnabled(false);
                 parentPtzCamerasPanel.setName("parentPtzCamerasPanel");
-                parentPtzCamerasPanel.setLayout(new GridLayout(1, 0, 20, 0));
+                parentPtzCamerasPanel.setLayout(new BorderLayout());
             }
             splitPaneMainContent.setTopComponent(parentPtzCamerasPanel);
 
