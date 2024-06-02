@@ -1,10 +1,5 @@
 package com.calvaryventura.broadcast.ptzcamera.ui;
 
-import java.awt.BorderLayout;
-import java.awt.GridLayout;
-import javax.swing.Box;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import com.calvaryventura.broadcast.ptzcamera.ui.preset.PtzCameraPresetEntryUi;
 import com.calvaryventura.broadcast.ptzcamera.ui.preset.PtzCameraPresetEntryUi.PtzCameraPresetUiAction;
 import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
@@ -14,14 +9,20 @@ import com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import java.awt.Color;
@@ -29,11 +30,14 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +52,9 @@ public class PtzCameraControllerUi extends JPanel
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private static final File PRESETS_PERSISTENCE_FILE = new File(System.getProperty("user.home") + "/broadcast_camera_presets.txt");
+    private static final int PTZ_CAMERA_MAX_PRESET_IDX = 100;
     private final Map<String, Boolean> ptzCameraNamesConnectionStatuses = new HashMap<>();
+    private final Map<Integer, PtzCameraPresetEntryUi> lastPresetsSelectedPerCameraIndex = new HashMap<>();
     private final IPtzCameraControllerUiCallback callback;
     private final List<PtzCameraPresetEntryUi> presets;
     private final DragAndDropUtility dh = new DragAndDropUtility();
@@ -66,22 +72,31 @@ public class PtzCameraControllerUi extends JPanel
         // create the presets from disk and connect callback actions
         this.presets = this.loadPresetNamesSavedToDisk(ptzCameraNames);
         this.presets.forEach(preset -> preset.initializePresetUserAction(action -> this.processPresetUserAction(preset, action)));
-        this.buttonSaveEdits.addActionListener(e -> this.processSavePresetButton());
+        this.buttonSaveEdits.addActionListener(e -> this.processSavePresetToPtzCameraButton());
+
+        // initialize the mouse listeners for the drag and drop preset UI functionality
+        this.panelPresetsHolder.addMouseListener(this.dh);
+        this.panelPresetsHolder.addMouseMotionListener(this.dh);
 
         // button for adding a new preset
         this.buttonAddNewPreset.addActionListener(e -> {
             final String cameraName = ptzCameraNames.get(this.comboBoxCameraNames.getSelectedIndex());
-            final int presetIdx = 0; // TODO
-
-            // create the new preset and add it to the list of presets
-            final PtzCameraPresetEntryUi newPreset = new PtzCameraPresetEntryUi(cameraName, this.comboBoxCameraNames.getSelectedIndex(),
-                    "[...New Preset...]", presetIdx);
-            this.presets.add(newPreset);
+            final int presetIdx = this.locateNotUtilizedPtzCameraPresetIdx(cameraName);
 
             // initialize this new preset in the same manner as we would initialize any other preset
+            final PtzCameraPresetEntryUi newPreset = new PtzCameraPresetEntryUi(cameraName, this.comboBoxCameraNames.getSelectedIndex(), null, presetIdx);
+            this.presets.add(newPreset);
+            this.savePresetsToDisk();
             newPreset.initializePresetUserAction(action -> this.processPresetUserAction(newPreset, action));
             newPreset.setPresetEntryEnabled(this.ptzCameraNamesConnectionStatuses.get(cameraName));
             this.redrawAllCameraPresetsIntoScrollableUiPanel();
+            newPreset.setEditButtonClicked();
+
+            // scroll the scroll pane all the way to the bottom to view the newest/latest preset
+            SwingUtilities.invokeLater(() -> {
+                final JScrollBar vertical = this.scrollPanePresets.getVerticalScrollBar();
+                vertical.setValue(vertical.getMaximum());
+            });
         });
 
         // button for deleting a preset
@@ -89,43 +104,45 @@ public class PtzCameraControllerUi extends JPanel
             this.presets.remove(this.presetSelectedForEditing);
             this.processPresetUserAction(this.presetSelectedForEditing, PtzCameraPresetUiAction.EDIT_BUTTON_DESELECTED);
             this.redrawAllCameraPresetsIntoScrollableUiPanel();
+            this.savePresetsToDisk();
+            this.lastPresetsSelectedPerCameraIndex.values().remove(this.presetSelectedForEditing);
         });
 
         // default camera connection state is false/not connected for all cameras specified
         ptzCameraNames.forEach(ptzCameraName -> this.setCameraConnectionStatus(ptzCameraName, false));
 
         // initialize callbacks from the UI elements, include the selected camera index in the callback
-        this.directionalSwipePanel.addXYOutputConsumer((pan, tilt) -> this.callback.panTilt(this.comboBoxCameraNames.getSelectedIndex(), pan, tilt));
-        this.zoomSlider.addValueChangedConsumer(zoom -> this.callback.zoom(this.comboBoxCameraNames.getSelectedIndex(), zoom));
+        this.directionalSwipePanel.addXYOutputConsumer((pan, tilt) -> this.callback.panTilt(this.presetSelectedForEditing.getCameraIdx(), pan, tilt));
+        this.zoomSlider.addValueChangedConsumer(zoom -> this.callback.zoom(this.presetSelectedForEditing.getCameraIdx(), zoom));
 
         // initially draw the preset tiles into the UI scroll pane
         new DragScrollListener(this.panelPresetsHolder).hideScrollBars(true);
         this.redrawAllCameraPresetsIntoScrollableUiPanel();
+
+        // TODO this is a start but STILL not working..... and the preset changing order isn't really working either...
+        dh.addDragAndDropReorderCallback(dragAndDropActive -> {
+            if (dragAndDropActive)
+            {
+                // for reordering, prevent scroll pane movement and enable the drag and drop
+                this.allowPresetPanelScrollPaneMovement(false);
+            } else
+            {
+                // on drag and drop button released, sort the presets based on incrementing Y pixel location and save new order to disk
+                this.allowPresetPanelScrollPaneMovement(true);
+                this.presets.sort(Comparator.comparingInt(JComponent::getY));
+                this.savePresetsToDisk();
+            }
+        });
     }
 
     /**
      * Call this whenever we want to update the number of camera presets shown on the UI.
-     * All camera presets are placed into a scrollable panel.
+     * All camera presets {@link #presets} are placed into a scrollable panel.
      */
     private void redrawAllCameraPresetsIntoScrollableUiPanel()
     {
-// TODO
-    /*
-        // complicated layout descriptor for adding PTZ camera preset items into their layout panel, but it does make them stack nice and allows vertical space between entries to grow and fill
-        final GridBagConstraints gridBagConstraints = new GridBagConstraints(0, GridBagConstraints.RELATIVE, 1, this.presets.size(),
-                1.0, 1.0, GridBagConstraints.NORTH, GridBagConstraints.HORIZONTAL, new Insets(0, 5, 20, 5), 0, 0);
-
-        // add all UI tiles to the scrollable pane and revalidate
-        this.presets.forEach(presetUiTile -> this.panelPresetsHolder.add(presetUiTile, gridBagConstraints));
-        this.revalidate();
-     */
-
-        final Box box = Box.createVerticalBox();
-        box.addMouseListener(this.dh);
-        box.addMouseMotionListener(this.dh);
-        this.presets.forEach(box::add);
         this.panelPresetsHolder.removeAll();
-        this.panelPresetsHolder.add(box, BorderLayout.CENTER);
+        this.presets.forEach(this.panelPresetsHolder::add);
         this.panelPresetsHolder.revalidate();
     }
 
@@ -141,17 +158,17 @@ public class PtzCameraControllerUi extends JPanel
         {
             // just changing the name of the preset, update on disk, no other action required
             case NAME_CHANGED:
-                this.presetNameChangedSaveToDisk();
+                this.savePresetsToDisk();
                 break;
 
             // EDIT button triggers the right-side UI portion for editing this preset
             case EDIT_BUTTON_SELECTED:
                 this.buttonSaveEdits.setEnabled(true);
                 this.buttonDeletePreset.setEnabled(true);
-                this.directionalSwipePanel.setEnabled(true); // TODO the enable/disable doesn't do anything yet!!
+                this.directionalSwipePanel.setEnabled(true);
                 this.zoomSlider.setEnabled(true);
                 this.presets.stream().filter(p -> !p.equals(preset)).forEach(PtzCameraPresetEntryUi::setEditButtonDeselected);
-                this.labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>" + preset.getPresetName() + "</html>");
+                this.labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>" + preset.getCameraName() + "/" + preset.getPresetName() + "</html>");
                 this.presetSelectedForEditing = preset;
                 break;
 
@@ -168,19 +185,8 @@ public class PtzCameraControllerUi extends JPanel
 
             // call/GoTo preset action (returns a boolean indicating successful camera movement)
             case CALL_BUTTON_PRESSED:
+                this.lastPresetsSelectedPerCameraIndex.put(preset.getCameraIdx(), preset);
                 this.callback.callPressed(preset.getCameraIdx(), preset.getPresetIdx());
-                break;
-
-            case REORDER_BUTTON_PRESSED:
-                logger.info("\n\nPRESS\n\n");
-                // TODO
-                //SwingUtilities.invokeLater(() -> this.dh.startDragAndDropReorder(preset));
-                break;
-
-            case REORDER_BUTTON_RELEASED:
-                logger.info("\n\nRELEASED !!\n\n");
-                // TODO
-                //SwingUtilities.invokeLater(() -> this.dh.startDragAndDropReorder(preset));
                 break;
         }
     }
@@ -189,7 +195,7 @@ public class PtzCameraControllerUi extends JPanel
      * When we are editing a preset, and the user clicks the "SAVE EDITS" button,
      * this gets called to update the 'set' callback, and also to update the status label.
      */
-    private void processSavePresetButton()
+    private void processSavePresetToPtzCameraButton()
     {
         final boolean setOk = this.callback.setPressed(this.presetSelectedForEditing.getCameraIdx(), this.presetSelectedForEditing.getPresetIdx());
         final String origText = this.labelPresetEditStatus.getText();
@@ -226,30 +232,44 @@ public class PtzCameraControllerUi extends JPanel
     }
 
     /**
-     * Sets the display background color or any preset that was selected.
-     *
-     * @param backgroundColor color to display
+     * @param cameraIdxPreview index of the active preview camera (or -1 for no preview)
+     * @param cameraIdxProgram index of the active program camera (or -1 for no program)
      */
-    public void setActivePresetBackgroundColor(Color backgroundColor)
+    public void setActivePresetsColored(int cameraIdxPreview, int cameraIdxProgram)
     {
-    /*
-        this.presets.forEach(p -> p.setContentPanelColor(null));
-        if (this.lastClickedPresetIdx >= 0 && this.lastClickedPresetIdx < this.presets.size())
+        this.presets.forEach(p -> p.setPresetColor(null)); // reset all colors in all presets initially
+        final PtzCameraPresetEntryUi previewPreset = this.lastPresetsSelectedPerCameraIndex.get(cameraIdxPreview);
+        if (previewPreset != null)
         {
-            this.presets.get(this.lastClickedPresetIdx).setContentPanelColor(backgroundColor);
+            previewPreset.setPresetColor(Color.GREEN);
         }
-        this.lastBackgroundColor = backgroundColor;
+        final PtzCameraPresetEntryUi programPreset = this.lastPresetsSelectedPerCameraIndex.get(cameraIdxProgram);
+        if (programPreset != null)
+        {
+            programPreset.setPresetColor(Color.RED);
+        }
+    }
 
+    /**
+     * @param cameraName specified camera we want a new preset index for
+     * @return preset index (up to the max allowed) that is NOT currently utilized for this camera
      */
+    private int locateNotUtilizedPtzCameraPresetIdx(String cameraName)
+    {
+        final List<Integer> currentlyUtilizedPresetIndices = this.presets.stream()
+                .filter(p -> p.getCameraName().trim().equalsIgnoreCase(cameraName.trim()))
+                .map(PtzCameraPresetEntryUi::getPresetIdx).collect(Collectors.toList());
+        return IntStream.range(0, PTZ_CAMERA_MAX_PRESET_IDX).boxed()
+                .filter(i -> !currentlyUtilizedPresetIndices.contains(i)).findFirst()
+                .orElseThrow(() -> new RuntimeException("Unable to find a free/not utilized preset index for " + cameraName));
     }
 
-    // TODO
-    public void setActivePreviewSelection(int cameraIdx, int presetIdx)
+    /**
+     * @param allowScrolling allows the scroll pane to move in the vertical axis when enabled
+     */
+    private void allowPresetPanelScrollPaneMovement(boolean allowScrolling)
     {
-    }
-
-    public void setActiveProgramSelection(int cameraIdx, int presetIdx)
-    {
+        this.scrollPanePresets.getVerticalScrollBar().setUnitIncrement(allowScrolling ? 1 : 0);
     }
 
     /**
@@ -261,7 +281,7 @@ public class PtzCameraControllerUi extends JPanel
      *                    should we be unable to load the file from disk
      * @return preset names which are one name per line in the preset file
      */
-    private List<PtzCameraPresetEntryUi> loadPresetNamesSavedToDisk(List<String> cameraNames)
+    private synchronized List<PtzCameraPresetEntryUi> loadPresetNamesSavedToDisk(List<String> cameraNames)
     {
         try
         {
@@ -288,9 +308,9 @@ public class PtzCameraControllerUi extends JPanel
      * Fired when we change the name of a preset, updates the file on disk.
      * Note: the current order of presets found in {@link #presets} matches the order in the file.
      */
-    private void presetNameChangedSaveToDisk()
+    private synchronized void savePresetsToDisk()
     {
-        try (PrintWriter out = new PrintWriter(PRESETS_PERSISTENCE_FILE))
+        try (PrintWriter out = new PrintWriter(new FileWriter(PRESETS_PERSISTENCE_FILE))) //TODO check truncation
         {
             this.presets.stream()
                     .map(p -> p.getCameraName() + "," + p.getCameraIdx() + "," + p.getPresetName() + "," + p.getPresetIdx())
@@ -308,8 +328,6 @@ public class PtzCameraControllerUi extends JPanel
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        JScrollPane scrollPane1 = new JScrollPane();
-        panelPresetsHolder = new JPanel();
         JSeparator separator1 = new JSeparator();
         JPanel panel1 = new JPanel();
         JPanel panel3 = new JPanel();
@@ -323,6 +341,8 @@ public class PtzCameraControllerUi extends JPanel
         buttonDeletePreset = new JButton();
         directionalSwipePanel = new DirectionalTouchUi();
         zoomSlider = new HorizontalZoomTouchUi();
+        scrollPanePresets = new JScrollPane();
+        panelPresetsHolder = new JPanel();
 
         //======== this ========
         setBackground(Color.black);
@@ -331,32 +351,10 @@ public class PtzCameraControllerUi extends JPanel
         setMinimumSize(new Dimension(324, 100));
         setName("this");
         setLayout(new GridBagLayout());
-        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 140, 0};
-        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0};
-        ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 0.0, 0.0, 1.0E-4};
-        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
-
-        //======== scrollPane1 ========
-        {
-            scrollPane1.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            scrollPane1.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-            scrollPane1.setOpaque(false);
-            scrollPane1.setBackground(Color.black);
-            scrollPane1.setBorder(null);
-            scrollPane1.setName("scrollPane1");
-
-            //======== panelPresetsHolder ========
-            {
-                panelPresetsHolder.setBorder(null);
-                panelPresetsHolder.setBackground(Color.black);
-                panelPresetsHolder.setName("panelPresetsHolder");
-                panelPresetsHolder.setLayout(new GridLayout());
-            }
-            scrollPane1.setViewportView(panelPresetsHolder);
-        }
-        add(scrollPane1, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 10), 0, 0));
+        ((GridBagLayout) getLayout()).columnWidths = new int[]{0, 0, 140, 0};
+        ((GridBagLayout) getLayout()).rowHeights = new int[]{0, 0};
+        ((GridBagLayout) getLayout()).columnWeights = new double[]{1.0, 0.0, 0.0, 1.0E-4};
+        ((GridBagLayout) getLayout()).rowWeights = new double[]{1.0, 1.0E-4};
 
         //---- separator1 ----
         separator1.setOrientation(SwingConstants.VERTICAL);
@@ -368,8 +366,8 @@ public class PtzCameraControllerUi extends JPanel
         separator1.setPreferredSize(new Dimension(2, 0));
         separator1.setName("separator1");
         add(separator1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.VERTICAL,
-            new Insets(0, 0, 0, 10), 0, 0));
+                GridBagConstraints.CENTER, GridBagConstraints.VERTICAL,
+                new Insets(0, 0, 0, 10), 0, 0));
 
         //======== panel1 ========
         {
@@ -377,20 +375,20 @@ public class PtzCameraControllerUi extends JPanel
             panel1.setBorder(new EmptyBorder(0, 5, 0, 0));
             panel1.setName("panel1");
             panel1.setLayout(new GridBagLayout());
-            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0};
-            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0};
-            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
-            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0E-4};
+            ((GridBagLayout) panel1.getLayout()).columnWidths = new int[]{0, 0};
+            ((GridBagLayout) panel1.getLayout()).rowHeights = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0};
+            ((GridBagLayout) panel1.getLayout()).columnWeights = new double[]{1.0, 1.0E-4};
+            ((GridBagLayout) panel1.getLayout()).rowWeights = new double[]{0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0E-4};
 
             //======== panel3 ========
             {
                 panel3.setOpaque(false);
                 panel3.setName("panel3");
                 panel3.setLayout(new GridBagLayout());
-                ((GridBagLayout)panel3.getLayout()).columnWidths = new int[] {0, 0, 0};
-                ((GridBagLayout)panel3.getLayout()).rowHeights = new int[] {0, 0};
-                ((GridBagLayout)panel3.getLayout()).columnWeights = new double[] {1.0, 0.0, 1.0E-4};
-                ((GridBagLayout)panel3.getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
+                ((GridBagLayout) panel3.getLayout()).columnWidths = new int[]{0, 0, 0};
+                ((GridBagLayout) panel3.getLayout()).rowHeights = new int[]{0, 0};
+                ((GridBagLayout) panel3.getLayout()).columnWeights = new double[]{1.0, 0.0, 1.0E-4};
+                ((GridBagLayout) panel3.getLayout()).rowWeights = new double[]{1.0, 1.0E-4};
 
                 //---- labelConnectionStatus2 ----
                 labelConnectionStatus2.setText("<html><u>Select Camera for which<br>to add new preset:</u></html>");
@@ -402,8 +400,8 @@ public class PtzCameraControllerUi extends JPanel
                 labelConnectionStatus2.setVerticalAlignment(SwingConstants.BOTTOM);
                 labelConnectionStatus2.setName("labelConnectionStatus2");
                 panel3.add(labelConnectionStatus2, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 7), 0, 0));
+                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                        new Insets(0, 0, 0, 7), 0, 0));
 
                 //---- buttonAddNewPreset ----
                 buttonAddNewPreset.setIcon(new ImageIcon(getClass().getResource("/icons/plus_green_32h.png")));
@@ -417,31 +415,31 @@ public class PtzCameraControllerUi extends JPanel
                 buttonAddNewPreset.setIconTextGap(6);
                 buttonAddNewPreset.setName("buttonAddNewPreset");
                 panel3.add(buttonAddNewPreset, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 0), 0, 0));
+                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                        new Insets(0, 0, 0, 0), 0, 0));
             }
             panel1.add(panel3, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 10, 0), 0, 0));
 
             //---- comboBoxCameraNames ----
-            comboBoxCameraNames.setModel(new DefaultComboBoxModel<>(new String[] {
-                " "
+            comboBoxCameraNames.setModel(new DefaultComboBoxModel<>(new String[]{
+                    " "
             }));
             comboBoxCameraNames.setForeground(Color.white);
             comboBoxCameraNames.setBackground(Color.black);
             comboBoxCameraNames.setFont(new Font("Ubuntu", Font.BOLD, 18));
             comboBoxCameraNames.setName("comboBoxCameraNames");
             panel1.add(comboBoxCameraNames, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 10, 0), 0, 0));
 
             //---- separator2 ----
             separator2.setForeground(Color.magenta);
             separator2.setName("separator2");
             panel1.add(separator2, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL,
-                new Insets(0, 0, 10, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL,
+                    new Insets(0, 0, 10, 0), 0, 0));
 
             //---- labelPresetEditStatus ----
             labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>[Nothing selected]</html>");
@@ -453,8 +451,8 @@ public class PtzCameraControllerUi extends JPanel
             labelPresetEditStatus.setVerticalAlignment(SwingConstants.BOTTOM);
             labelPresetEditStatus.setName("labelPresetEditStatus");
             panel1.add(labelPresetEditStatus, new GridBagConstraints(0, 4, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 10, 0), 0, 0));
 
             //======== panel2 ========
             {
@@ -495,34 +493,57 @@ public class PtzCameraControllerUi extends JPanel
                 panel2.add(buttonDeletePreset);
             }
             panel1.add(panel2, new GridBagConstraints(0, 5, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 10, 0), 0, 0));
 
             //---- directionalSwipePanel ----
             directionalSwipePanel.setMinimumSize(new Dimension(300, 150));
             directionalSwipePanel.setPreferredSize(new Dimension(300, 150));
             directionalSwipePanel.setDisplayMessage("PAN & TILT");
+            directionalSwipePanel.setEnabled(false);
             directionalSwipePanel.setName("directionalSwipePanel");
             panel1.add(directionalSwipePanel, new GridBagConstraints(0, 6, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 10, 0), 0, 0));
 
             //---- zoomSlider ----
             zoomSlider.setMinimumSize(new Dimension(300, 45));
             zoomSlider.setPreferredSize(new Dimension(300, 45));
+            zoomSlider.setEnabled(false);
             zoomSlider.setName("zoomSlider");
             panel1.add(zoomSlider, new GridBagConstraints(0, 7, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 0, 0), 0, 0));
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 0), 0, 0));
         }
         add(panel1, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
-            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-            new Insets(0, 0, 0, 0), 0, 0));
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 0), 0, 0));
+
+        //======== scrollPanePresets ========
+        {
+            scrollPanePresets.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            scrollPanePresets.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+            scrollPanePresets.setOpaque(false);
+            scrollPanePresets.setBackground(Color.black);
+            scrollPanePresets.setBorder(null);
+            scrollPanePresets.setName("scrollPanePresets");
+
+            //======== panelPresetsHolder ========
+            {
+                panelPresetsHolder.setBorder(null);
+                panelPresetsHolder.setBackground(Color.black);
+                panelPresetsHolder.setName("panelPresetsHolder");
+                panelPresetsHolder.setLayout(new BoxLayout(panelPresetsHolder, BoxLayout.Y_AXIS));
+            }
+            scrollPanePresets.setViewportView(panelPresetsHolder);
+        }
+        add(scrollPanePresets, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 0, 10), 0, 0));
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    private JPanel panelPresetsHolder;
     private JLabel labelConnectionStatus2;
     private JButton buttonAddNewPreset;
     private JComboBox<String> comboBoxCameraNames;
@@ -532,5 +553,7 @@ public class PtzCameraControllerUi extends JPanel
     private JButton buttonDeletePreset;
     private DirectionalTouchUi directionalSwipePanel;
     private HorizontalZoomTouchUi zoomSlider;
+    private JScrollPane scrollPanePresets;
+    private JPanel panelPresetsHolder;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }

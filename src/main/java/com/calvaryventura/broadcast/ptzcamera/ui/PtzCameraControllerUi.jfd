@@ -16,22 +16,6 @@ new FormModel {
 			"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
 			"preferredSize": new java.awt.Dimension( 324, 100 )
 			"minimumSize": new java.awt.Dimension( 324, 100 )
-			add( new FormContainer( "javax.swing.JScrollPane", new FormLayoutManager( class javax.swing.JScrollPane ) ) {
-				name: "scrollPane1"
-				"horizontalScrollBarPolicy": 31
-				"verticalScrollBarPolicy": 21
-				"opaque": false
-				"background": sfield java.awt.Color black
-				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
-				auxiliary() {
-					"JavaCodeGenerator.variableLocal": true
-				}
-				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) ) {
-					name: "panelPresetsHolder"
-					"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
-					"background": sfield java.awt.Color black
-				} )
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 			add( new FormComponent( "javax.swing.JSeparator" ) {
 				name: "separator1"
 				"orientation": 1
@@ -177,6 +161,7 @@ new FormModel {
 					"minimumSize": new java.awt.Dimension( 300, 150 )
 					"preferredSize": new java.awt.Dimension( 300, 150 )
 					"displayMessage": "PAN & TILT"
+					"enabled": false
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridy": 6
 				} )
@@ -184,12 +169,28 @@ new FormModel {
 					name: "zoomSlider"
 					"minimumSize": new java.awt.Dimension( 300, 45 )
 					"preferredSize": new java.awt.Dimension( 300, 45 )
+					"enabled": false
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridy": 7
 				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 				"gridx": 2
 			} )
+			add( new FormContainer( "javax.swing.JScrollPane", new FormLayoutManager( class javax.swing.JScrollPane ) ) {
+				name: "scrollPanePresets"
+				"horizontalScrollBarPolicy": 31
+				"verticalScrollBarPolicy": 21
+				"opaque": false
+				"background": sfield java.awt.Color black
+				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class javax.swing.BoxLayout ) {
+					"axis": 1
+				} ) {
+					name: "panelPresetsHolder"
+					"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+					"background": sfield java.awt.Color black
+				} )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )
 			"size": new java.awt.Dimension( 605, 710 )

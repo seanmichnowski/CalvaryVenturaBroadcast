@@ -1,5 +1,7 @@
 package com.calvaryventura.broadcast.uiwidgets;
 
+import com.calvaryventura.broadcast.ptzcamera.ui.preset.PtzCameraPresetEntryUi;
+
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -22,8 +24,11 @@ import java.awt.Rectangle;
 import java.awt.dnd.DragSource;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * TODO
@@ -40,6 +45,7 @@ public class DragAndDropUtility extends MouseAdapter
     private Point startPt;
     private Point dragOffset;
     private final int gestureMotionThreshold = DragSource.getDragThreshold();
+    private List<Consumer<Boolean>> dragAndDropHappeningConsumers = new ArrayList<>();
 
     public DragAndDropUtility()
     {
@@ -106,29 +112,32 @@ public class DragAndDropUtility extends MouseAdapter
         parent.repaint();
     }
 
-    // TODO added on button click...
-    public void startDragAndDropReorder(JComponent draggingComonent)
+    public void addDragAndDropReorderCallback(Consumer<Boolean> dragAndDropHappening)
     {
-        //MouseInfo.getPointerInfo().getLocation();
-        this.draggingComonent = draggingComonent;
-        startPt = draggingComonent.getLocation();
+        this.dragAndDropHappeningConsumers.add(dragAndDropHappening);
     }
 
     @Override
     public void mousePressed(MouseEvent e)
     {
         JComponent parent = (JComponent) e.getComponent();
-        if (parent.getComponentCount() <= 1)
+        if (parent.getComponentCount() <= 1 || !(parent.getComponentAt(e.getPoint()) instanceof PtzCameraPresetEntryUi))
         {
-            startPt = null;
-            return;
+            this.startPt = null;
+        } else
+        {
+            this.startPt = e.getPoint();
+            this.dragAndDropHappeningConsumers.forEach(c -> c.accept(true));
         }
-        startPt = e.getPoint();
     }
 
     @Override
     public void mouseDragged(MouseEvent e)
     {
+        if (startPt == null)
+        {
+            return;
+        }
         Point pt = e.getPoint();
         JComponent parent = (JComponent) e.getComponent();
 
@@ -199,12 +208,14 @@ public class DragAndDropUtility extends MouseAdapter
             if (Objects.equals(c, gap))
             {
                 swapComponentLocation(parent, gap, cmp, i);
+                this.dragAndDropHappeningConsumers.forEach(co -> co.accept(false));
                 return;
             }
             int tgt = getTargetIndex(c.getBounds(), pt, i);
             if (tgt >= 0)
             {
                 swapComponentLocation(parent, gap, cmp, tgt);
+                this.dragAndDropHappeningConsumers.forEach(co -> co.accept(false));
                 return;
             }
         }
@@ -215,6 +226,7 @@ public class DragAndDropUtility extends MouseAdapter
         {
             swapComponentLocation(parent, gap, cmp, index);
         }
+        this.dragAndDropHappeningConsumers.forEach(c -> c.accept(false));
     }
 
     /*

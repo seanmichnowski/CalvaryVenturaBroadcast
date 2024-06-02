@@ -18,9 +18,8 @@ public interface IPtzCameraControllerUiCallback
      * Preview...
      * @param ptzCameraIdx index of the PTZ camera we are manipulating
      * @param presetIdx
-     * @return
      */
-    boolean callPressed(int ptzCameraIdx, int presetIdx);
+    void callPressed(int ptzCameraIdx, int presetIdx);
 
     /**
      * Moving...

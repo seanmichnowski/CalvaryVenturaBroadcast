@@ -13,7 +13,7 @@ new FormModel {
 			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/icons/camera_fullsize.png" )
 			add( new FormContainer( "javax.swing.JSplitPane", new FormLayoutManager( class javax.swing.JSplitPane ) ) {
 				name: "splitPaneMainContent"
-				"border": new javax.swing.border.EmptyBorder( 5, 0, 5, 0 )
+				"border": new javax.swing.border.EmptyBorder( 0, 0, 5, 0 )
 				"background": sfield java.awt.Color black
 				"orientation": 0
 				"resizeWeight": 0.6

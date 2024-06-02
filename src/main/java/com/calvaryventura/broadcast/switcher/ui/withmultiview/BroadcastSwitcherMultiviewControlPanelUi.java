@@ -7,6 +7,7 @@ import com.calvaryventura.broadcast.uiwidgets.DragScrollListener;
 import com.github.kokorin.jaffree.LogLevel;
 import com.github.kokorin.jaffree.StreamType;
 import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
+import com.github.kokorin.jaffree.ffmpeg.FFmpegResultFuture;
 import com.github.kokorin.jaffree.ffmpeg.Frame;
 import com.github.kokorin.jaffree.ffmpeg.FrameConsumer;
 import com.github.kokorin.jaffree.ffmpeg.FrameOutput;
@@ -26,6 +27,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -50,8 +52,6 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
 /**
@@ -84,7 +84,8 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     private BufferedImage multiviewImage = null;
     private final JPanel videoCanvasPanel;
     private final Object multiviewImageDrawLock = new Object();
-    private Future<?> ffmpegBackgroundThread;
+    private FFmpegResultFuture fFmpegResultFuture;
+    private long lastVideoDecodeUpdateTimeMs;
 
     /**
      * Creates the basic UI elements and callbacks.
@@ -141,9 +142,17 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
             public void componentResized(ComponentEvent e)
             {
                 super.componentResized(e);
-                startFfmpegMultiviewVideoDecodeThread(BroadcastSettings.getInst().getVideoSwitcherMultiviewVlcMediaPath(), videoCanvasPanel.getSize());
+                startFfmpegMultiviewVideoDecodeThread();
             }
         });
+
+        // create a watchdog timer to ensure the FFMPEG video decode updates regularly
+        new Timer(2000, e -> {
+            if (System.currentTimeMillis() - this.lastVideoDecodeUpdateTimeMs > 3000)
+            {
+                startFfmpegMultiviewVideoDecodeThread();
+            }
+        }).start();
     }
 
     /**
@@ -217,64 +226,50 @@ public class BroadcastSwitcherMultiviewControlPanelUi extends AbstractBroadcastS
     /**
      * Initialize the FFMPEG decoder to read the incoming RTSP multiview stream. We use the FFMPEG program
      * directly to scale the output video to exactly the JPanel canvas size. Therefore, we must call this
-     * method again each time the playback canvas gets resized.
-     *
-     * @param rtspConnectionUrl RTSP address of the multiview stream, coming from the external encoder
-     * @param videoCanvasSize   desired output size for the playing video
+     * method again each time the playback canvas gets resized. The RTSP video stream is defined from
+     * {@link BroadcastSettings#getInst()#getVideoSwitcherMultiviewVlcMediaPath()}.
      */
-    private void startFfmpegMultiviewVideoDecodeThread(String rtspConnectionUrl, Dimension videoCanvasSize)
+    private void startFfmpegMultiviewVideoDecodeThread()
     {
-        if (this.ffmpegBackgroundThread != null)
+        logger.info("Starting FFMPEG background thread to decode multiview RTSP stream...");
+        final Dimension videoCanvasSize = this.videoCanvasPanel.getSize(); // desired output size for the playing video
+        if (this.fFmpegResultFuture != null && !this.fFmpegResultFuture.isDone())
         {
-            this.ffmpegBackgroundThread.cancel(true);
-            this.ffmpegBackgroundThread = null;
+            this.fFmpegResultFuture.forceStop();
         }
-        this.ffmpegBackgroundThread = Executors.newSingleThreadExecutor().submit(() -> {
-            try
-            {
-                final FFmpeg fFmpeg = FFmpeg.atPath().addInput(UrlInput.fromUrl(rtspConnectionUrl))
-                        .addOutput(FrameOutput.withConsumer(
-                                        new FrameConsumer()
-                                        {
-                                            @Override
-                                            public void consumeStreams(List<Stream> streams)
-                                            {
-                                            }
+        this.fFmpegResultFuture = FFmpeg.atPath().addInput(UrlInput.fromUrl(BroadcastSettings.getInst().getVideoSwitcherMultiviewVlcMediaPath()))
+                .addOutput(FrameOutput.withConsumer(
+                                new FrameConsumer()
+                                {
+                                    @Override
+                                    public void consumeStreams(List<Stream> streams)
+                                    {
+                                    }
 
-                                            @Override
-                                            public void consume(Frame frame)
-                                            {
-                                                synchronized (multiviewImageDrawLock)
-                                                {
-                                                    multiviewImage = frame == null ? null : frame.getImage(); // check for end-of-stream
-                                                }
-                                                videoCanvasPanel.repaint();
-                                            }
-                                        })
-                                .setFrameRate(20)
-                                .disableStream(StreamType.AUDIO)
-                                .disableStream(StreamType.SUBTITLE)
-                                .disableStream(StreamType.DATA))
-                        .setProgressListener(progress -> logger.info(progress.toString()))
-                        .setLogLevel(LogLevel.WARNING)
-                        .addArguments("-vf", String.format("scale=%d:%d", videoCanvasSize.width, videoCanvasSize.height))
-                        .addArgument("-xerror")
-                        .addArguments("-probesize", "32")
-                        .addArguments("-movflags", "faststart")
-                        .addArguments("-rtbufsize", "0")
-                        .addArguments("-fflags", "nobuffer");
-                logger.info("Starting FFMPEG background thread to decode multiview RTSP stream...");
-                fFmpeg.execute();
-            } catch (Throwable e)
-            {
-                // null-out the multiview image
-                logger.info("Fatal FFMPEG error", e);
-                synchronized (this.multiviewImageDrawLock)
-                {
-                    this.multiviewImage = null;
-                }
-            }
-        });
+                                    @Override
+                                    public void consume(Frame frame)
+                                    {
+                                        synchronized (multiviewImageDrawLock)
+                                        {
+                                            multiviewImage = frame == null ? null : frame.getImage(); // check for end-of-stream
+                                            lastVideoDecodeUpdateTimeMs = System.currentTimeMillis();
+                                        }
+                                        videoCanvasPanel.repaint();
+                                    }
+                                })
+                        .setFrameRate(20)
+                        .disableStream(StreamType.AUDIO)
+                        .disableStream(StreamType.SUBTITLE)
+                        .disableStream(StreamType.DATA))
+                .setProgressListener(progress -> logger.info(progress.toString()))
+                .setLogLevel(LogLevel.WARNING)
+                .addArguments("-vf", String.format("scale=%d:%d", videoCanvasSize.width, videoCanvasSize.height))
+                .addArgument("-xerror") // tell ffmpeg to exit with non-zero code (generating Java exception on any error)
+                .addArguments("-probesize", "32")
+                .addArguments("-movflags", "faststart")
+                .addArguments("-rtbufsize", "0")
+                .addArguments("-fflags", "nobuffer")
+                .executeAsync();
     }
 
     /**
