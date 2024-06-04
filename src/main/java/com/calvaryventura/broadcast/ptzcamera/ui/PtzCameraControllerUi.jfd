@@ -6,10 +6,10 @@ new FormModel {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 			"$columnSpecs": "0:1.0, 0, 140"
 			"$rowSpecs": "0:1.0"
-			"$hGap": 10
 			"$vGap": 5
 			"$alignTop": true
 			"$alignLeft": true
+			"$hGap": 5
 		} ) {
 			name: "this"
 			"background": sfield java.awt.Color black
@@ -179,7 +179,6 @@ new FormModel {
 			add( new FormContainer( "javax.swing.JScrollPane", new FormLayoutManager( class javax.swing.JScrollPane ) ) {
 				name: "scrollPanePresets"
 				"horizontalScrollBarPolicy": 31
-				"verticalScrollBarPolicy": 21
 				"opaque": false
 				"background": sfield java.awt.Color black
 				"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
@@ -187,7 +186,7 @@ new FormModel {
 					"axis": 1
 				} ) {
 					name: "panelPresetsHolder"
-					"border": sfield com.jformdesigner.model.FormObject NULL_VALUE
+					"border": new javax.swing.border.EmptyBorder( 0, 0, 0, 10 )
 					"background": sfield java.awt.Color black
 				} )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )

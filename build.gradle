@@ -10,7 +10,6 @@ sourceCompatibility = 1.8
  * ***************************** GRADLE EXTERNAL REPOS ***********************************
  * ***************************************************************************************
  */
-
 buildscript {
 	repositories {
 		mavenCentral()
@@ -28,7 +27,6 @@ repositories {
  * ****************** ALL PROJECT EXTERNAL DEPENDENCIES LISTED HERE **********************
  * ***************************************************************************************
  */
-
 dependencies {
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.7'
@@ -37,13 +35,11 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7' // TODO needed???
 }
 
-
 /*
  * ***************************************************************************************
  * **************** JAR TASK - create a single Jar with all dependencies *****************
  * ***************************************************************************************
  */
-
 task createStandaloneJarTask(type: Jar) {
     // By default, gradle compiles Java code in the "src/main/java" folder,
     manifest {

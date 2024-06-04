@@ -4,8 +4,8 @@ import com.calvaryventura.broadcast.ptzcamera.ui.preset.PtzCameraPresetEntryUi;
 import com.calvaryventura.broadcast.ptzcamera.ui.preset.PtzCameraPresetEntryUi.PtzCameraPresetUiAction;
 import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
 import com.calvaryventura.broadcast.uiwidgets.DragAndDropUtility;
-import com.calvaryventura.broadcast.uiwidgets.DragScrollListener;
 import com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi;
+import com.calvaryventura.broadcast.uiwidgets.VerticalScrollBarUi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +57,6 @@ public class PtzCameraControllerUi extends JPanel
     private final Map<Integer, PtzCameraPresetEntryUi> lastPresetsSelectedPerCameraIndex = new HashMap<>();
     private final IPtzCameraControllerUiCallback callback;
     private final List<PtzCameraPresetEntryUi> presets;
-    private final DragAndDropUtility dh = new DragAndDropUtility();
     private PtzCameraPresetEntryUi presetSelectedForEditing;
 
     /**
@@ -68,6 +67,7 @@ public class PtzCameraControllerUi extends JPanel
     {
         this.initComponents();
         this.callback = callback;
+        VerticalScrollBarUi.setSc(this.scrollPanePresets);
 
         // create the presets from disk and connect callback actions
         this.presets = this.loadPresetNamesSavedToDisk(ptzCameraNames);
@@ -75,8 +75,9 @@ public class PtzCameraControllerUi extends JPanel
         this.buttonSaveEdits.addActionListener(e -> this.processSavePresetToPtzCameraButton());
 
         // initialize the mouse listeners for the drag and drop preset UI functionality
-        this.panelPresetsHolder.addMouseListener(this.dh);
-        this.panelPresetsHolder.addMouseMotionListener(this.dh);
+        final DragAndDropUtility dragAndDropHelper = new DragAndDropUtility();
+        this.panelPresetsHolder.addMouseListener(dragAndDropHelper);
+        this.panelPresetsHolder.addMouseMotionListener(dragAndDropHelper);
 
         // button for adding a new preset
         this.buttonAddNewPreset.addActionListener(e -> {
@@ -116,22 +117,12 @@ public class PtzCameraControllerUi extends JPanel
         this.zoomSlider.addValueChangedConsumer(zoom -> this.callback.zoom(this.presetSelectedForEditing.getCameraIdx(), zoom));
 
         // initially draw the preset tiles into the UI scroll pane
-        new DragScrollListener(this.panelPresetsHolder).hideScrollBars(true);
         this.redrawAllCameraPresetsIntoScrollableUiPanel();
 
-        // TODO this is a start but STILL not working..... and the preset changing order isn't really working either...
-        dh.addDragAndDropReorderCallback(dragAndDropActive -> {
-            if (dragAndDropActive)
-            {
-                // for reordering, prevent scroll pane movement and enable the drag and drop
-                this.allowPresetPanelScrollPaneMovement(false);
-            } else
-            {
-                // on drag and drop button released, sort the presets based on incrementing Y pixel location and save new order to disk
-                this.allowPresetPanelScrollPaneMovement(true);
-                this.presets.sort(Comparator.comparingInt(JComponent::getY));
-                this.savePresetsToDisk();
-            }
+        // on drag and drop button released, sort the presets based on incrementing Y pixel location and save new order to disk
+        dragAndDropHelper.addDragAndDropFinishedCallback(() -> {
+            this.presets.sort(Comparator.comparingInt(JComponent::getY));
+            this.savePresetsToDisk();
         });
     }
 
@@ -247,6 +238,7 @@ public class PtzCameraControllerUi extends JPanel
         if (programPreset != null)
         {
             programPreset.setPresetColor(Color.RED);
+            // TODO somewhere here grey-out all other presets for this camera!
         }
     }
 
@@ -262,14 +254,6 @@ public class PtzCameraControllerUi extends JPanel
         return IntStream.range(0, PTZ_CAMERA_MAX_PRESET_IDX).boxed()
                 .filter(i -> !currentlyUtilizedPresetIndices.contains(i)).findFirst()
                 .orElseThrow(() -> new RuntimeException("Unable to find a free/not utilized preset index for " + cameraName));
-    }
-
-    /**
-     * @param allowScrolling allows the scroll pane to move in the vertical axis when enabled
-     */
-    private void allowPresetPanelScrollPaneMovement(boolean allowScrolling)
-    {
-        this.scrollPanePresets.getVerticalScrollBar().setUnitIncrement(allowScrolling ? 1 : 0);
     }
 
     /**
@@ -310,7 +294,7 @@ public class PtzCameraControllerUi extends JPanel
      */
     private synchronized void savePresetsToDisk()
     {
-        try (PrintWriter out = new PrintWriter(new FileWriter(PRESETS_PERSISTENCE_FILE))) //TODO check truncation
+        try (PrintWriter out = new PrintWriter(new FileWriter(PRESETS_PERSISTENCE_FILE)))
         {
             this.presets.stream()
                     .map(p -> p.getCameraName() + "," + p.getCameraIdx() + "," + p.getPresetName() + "," + p.getPresetIdx())
@@ -367,7 +351,7 @@ public class PtzCameraControllerUi extends JPanel
         separator1.setName("separator1");
         add(separator1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.VERTICAL,
-                new Insets(0, 0, 0, 10), 0, 0));
+                new Insets(0, 0, 0, 5), 0, 0));
 
         //======== panel1 ========
         {
@@ -522,7 +506,6 @@ public class PtzCameraControllerUi extends JPanel
         //======== scrollPanePresets ========
         {
             scrollPanePresets.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            scrollPanePresets.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
             scrollPanePresets.setOpaque(false);
             scrollPanePresets.setBackground(Color.black);
             scrollPanePresets.setBorder(null);
@@ -530,7 +513,7 @@ public class PtzCameraControllerUi extends JPanel
 
             //======== panelPresetsHolder ========
             {
-                panelPresetsHolder.setBorder(null);
+                panelPresetsHolder.setBorder(new EmptyBorder(0, 0, 0, 10));
                 panelPresetsHolder.setBackground(Color.black);
                 panelPresetsHolder.setName("panelPresetsHolder");
                 panelPresetsHolder.setLayout(new BoxLayout(panelPresetsHolder, BoxLayout.Y_AXIS));
@@ -539,7 +522,7 @@ public class PtzCameraControllerUi extends JPanel
         }
         add(scrollPanePresets, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 0, 10), 0, 0));
+                new Insets(0, 0, 0, 5), 0, 0));
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
