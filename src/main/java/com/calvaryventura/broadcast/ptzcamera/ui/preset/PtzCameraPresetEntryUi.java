@@ -65,6 +65,7 @@ public class PtzCameraPresetEntryUi extends JPanel
         this.cameraIdx = cameraIdx;
         this.presetIdx = presetIdx;
         this.cameraName = cameraName;
+        this.labelCameraName.setText(this.cameraName);
     }
 
     /**
@@ -94,7 +95,14 @@ public class PtzCameraPresetEntryUi extends JPanel
     {
         this.buttonGoTo.setEnabled(enabled);
         this.buttonEdit.setEnabled(enabled);
-        this.labelCameraName.setText(this.cameraName);
+    }
+
+    /**
+     * @param connected indication if the associated camera for this preset is actively connected
+     */
+    public void setPresetEntryCameraConnectionStatus(boolean connected)
+    {
+        this.labelCameraName.setText(this.cameraName + (!connected ? " [Disconnected]" : ""));
     }
 
     /**
@@ -104,7 +112,10 @@ public class PtzCameraPresetEntryUi extends JPanel
      */
     public void setEditButtonClicked()
     {
-        this.buttonEdit.doClick();
+        if (!this.buttonEdit.isSelected())
+        {
+            this.buttonEdit.doClick();
+        }
     }
 
     /**

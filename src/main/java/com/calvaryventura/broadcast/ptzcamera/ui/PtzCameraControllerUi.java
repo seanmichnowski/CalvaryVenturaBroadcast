@@ -89,7 +89,7 @@ public class PtzCameraControllerUi extends JPanel
             this.presets.add(newPreset);
             this.savePresetsToDisk();
             newPreset.initializePresetUserAction(action -> this.processPresetUserAction(newPreset, action));
-            newPreset.setPresetEntryEnabled(this.ptzCameraNamesConnectionStatuses.get(cameraName));
+            newPreset.setPresetEntryCameraConnectionStatus(this.ptzCameraNamesConnectionStatuses.get(cameraName));
             this.redrawAllCameraPresetsIntoScrollableUiPanel();
             newPreset.setEditButtonClicked();
 
@@ -178,6 +178,7 @@ public class PtzCameraControllerUi extends JPanel
             case CALL_BUTTON_PRESSED:
                 this.lastPresetsSelectedPerCameraIndex.put(preset.getCameraIdx(), preset);
                 this.callback.callPressed(preset.getCameraIdx(), preset.getPresetIdx());
+                preset.setEditButtonClicked(); // move the called preset into EDIT mode
                 break;
         }
     }
@@ -209,7 +210,7 @@ public class PtzCameraControllerUi extends JPanel
     {
         // update camera connection status in the presets associated to this specified camera
         this.presets.stream().filter(p -> p.getCameraName().equalsIgnoreCase(cameraName))
-                .forEach(presetUiTile -> presetUiTile.setPresetEntryEnabled(connected));
+                .forEach(presetUiTile -> presetUiTile.setPresetEntryCameraConnectionStatus(connected));
 
         // update the local map of camera connection status
         this.ptzCameraNamesConnectionStatuses.put(cameraName, connected);
@@ -228,17 +229,28 @@ public class PtzCameraControllerUi extends JPanel
      */
     public void setActivePresetsColored(int cameraIdxPreview, int cameraIdxProgram)
     {
-        this.presets.forEach(p -> p.setPresetColor(null)); // reset all colors in all presets initially
+        // reset all colors in all presets initially
+        this.presets.forEach(p -> {
+            p.setPresetColor(null);
+            p.setPresetEntryEnabled(true);
+        });
+
+        // find the presets for the program and preview
         final PtzCameraPresetEntryUi previewPreset = this.lastPresetsSelectedPerCameraIndex.get(cameraIdxPreview);
-        if (previewPreset != null)
-        {
-            previewPreset.setPresetColor(Color.GREEN);
-        }
         final PtzCameraPresetEntryUi programPreset = this.lastPresetsSelectedPerCameraIndex.get(cameraIdxProgram);
-        if (programPreset != null)
+
+        // update all presets' colors and enabled states based on current program/preview states
+        for (PtzCameraPresetEntryUi p : this.presets)
         {
-            programPreset.setPresetColor(Color.RED);
-            // TODO somewhere here grey-out all other presets for this camera!
+            if (p.getCameraIdx() == cameraIdxProgram)
+            {
+                p.setPresetEntryEnabled(false);
+                p.setPresetColor(p.equals(programPreset) ? Color.RED : null);
+            } else if (p.getCameraIdx() == cameraIdxPreview)
+            {
+                p.setPresetEntryEnabled(true);
+                p.setPresetColor(p.equals(previewPreset) ? Color.GREEN : null);
+            }
         }
     }
 
