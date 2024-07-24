@@ -304,12 +304,11 @@ public class BlackmagicAtemSwitcherUserLayer
     /**
      * Byte 1 is the keyer index, but we only have one.
      *
-     * @param enabled sets the upstream keyer On Air
-     *
      * @return successful command execution
      */
-    public boolean setKeyerOnAirEnabled(boolean enabled)
+    public boolean toggleKeyerOnAirEnabled()
     {
+        final boolean enabled = !this.upstreamKeyOnAir;
         return this.transportLayer.sendCommand("CKOn", new byte[]{0, 0, (byte) (enabled ? 1 : 0), 0});
     }
 

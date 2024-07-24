@@ -5,7 +5,6 @@ import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -119,7 +118,6 @@ public class BroadcastControlMain extends JFrame
         this.switcherControlPanel.setBorder(TitledBorderCreator.createTitledBorder("Video Switcher"));
 
         // connections for the switcher's UI control panel to actually send commands
-        final AtomicBoolean lyricsEnabled = new AtomicBoolean(false);
         videoSwitcherControllerUi.setCallbacks(new BroadcastSwitcherUiCallbacks()
         {
             @Override
@@ -149,8 +147,7 @@ public class BroadcastControlMain extends JFrame
             @Override
             public void onLyricsEnabled()
             {
-                lyricsEnabled.set(!lyricsEnabled.get());
-                switcherCommandSender.setKeyerOnAirEnabled(lyricsEnabled.get());
+                switcherCommandSender.toggleKeyerOnAirEnabled();
             }
 
             @Override

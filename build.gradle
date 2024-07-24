@@ -65,3 +65,29 @@ task createStandaloneJarTask(type: Jar) {
     destinationDir = file(System.getProperty("user.home") + '/Desktop/')
     with jar
 }
+
+task createStandaloneStrippedDownJarTask(type: Jar) {
+    // By default, gradle compiles Java code in the "src/main/java" folder,
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'com.calvaryventura.broadcast.mainstrippeddown.BroadcastControlMainStrippedDown'
+    }
+
+    // output jar filename setup
+    baseName   = 'Calvary_Ventura_Broadcast_Console' // start of filename
+    classifier = null                                // end of filename
+    version    = null                                // don't include version #'s
+
+    // include various files inside of the source tree into the output jar
+    from('src') {
+        into 'src'
+        include '**/*'
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    destinationDir = file(System.getProperty("user.home") + '/Desktop/')
+    with jar
+}

@@ -1,14 +1,23 @@
 package com.calvaryventura.broadcast.switcher.ui.withoutmultiview;
 
-import com.calvaryventura.broadcast.settings.BroadcastSettings;
+import java.awt.Dimension;
 import com.calvaryventura.broadcast.switcher.ui.AbstractBroadcastSwitcherUi;
 import com.calvaryventura.broadcast.uiwidgets.VerticalLabelUI;
 
-import javax.swing.*;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,13 +31,11 @@ import java.util.function.Consumer;
 public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
 {
     // local states
-    private boolean fadeToBlackOnStatus;
     private boolean lyricsOnStatus;
 
     // these are fired when the user presses UI buttons to change the video switcher
     private Consumer<Integer> previewSourceChanged;
     private Consumer<Integer> programSourceChanged;
-    private Consumer<Boolean> fadeToBlackPressed;
     private Consumer<Boolean> lyricsPressed;
     private Consumer<Boolean> autoPressed;
     private Consumer<Boolean> cutPressed;
@@ -47,12 +54,9 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
             this.lyricsOnStatus = !this.lyricsOnStatus;
             this.lyricsPressed.accept(this.lyricsOnStatus);
         });
-        this.buttonFadeToBlack.addActionListener(e -> {
-            this.fadeToBlackOnStatus = !this.fadeToBlackOnStatus;
-            this.fadeToBlackPressed.accept(!this.fadeToBlackOnStatus);
-        });
         this.buttonCut.addActionListener(e -> this.cutPressed.accept(true));
         this.buttonFade.addActionListener(e -> this.autoPressed.accept(true));
+        this.buttonVolume.addActionListener(e -> super.showVolumePopup());
     }
 
     /**
@@ -81,11 +85,6 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
     public void onProgramSourceChanged(Consumer<Integer> programSourceChanged)
     {
         this.programSourceChanged = programSourceChanged;
-    }
-
-    public void onFadeToBlackPressed(Consumer<Boolean> fadeToBlackPressed)
-    {
-        this.fadeToBlackPressed = fadeToBlackPressed;
     }
 
     public void onLyricsPressed(Consumer<Boolean> lyricsPressed)
@@ -127,16 +126,6 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
     public void setFadeTransitionInProgressStatus(boolean active)
     {
         this.buttonFade.setBackground(active ? Color.YELLOW : Color.DARK_GRAY);
-    }
-
-    /**
-     * @param active indication the fade to black is active or inactive
-     * @param inTransition indicates we are fading, show the button in yellow
-     */
-    public void setFadeToBlackOnStatus(boolean active, boolean inTransition)
-    {
-        this.buttonFadeToBlack.setBackground(inTransition ? Color.YELLOW : active ? Color.RED : Color.DARK_GRAY);
-        this.fadeToBlackOnStatus = active;
     }
 
     /**
@@ -189,7 +178,7 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
             this.previewButton.setBackground(Color.DARK_GRAY);
             this.previewButton.setForeground(Color.WHITE);
             this.previewButton.setFont(new Font("Segoe", Font.BOLD, 18));
-            this.previewButton.setBorder(new CompoundBorder(new EmptyBorder(5,5,5,5), new LineBorder(Color.GREEN)));
+            this.previewButton.setBorder(new CompoundBorder(new EmptyBorder(5, 5, 5, 5), new LineBorder(Color.GREEN)));
             this.previewButton.addActionListener(e -> previewSourceChanged.accept(videoSourceIndex));
 
             // create the program button
@@ -197,7 +186,7 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
             this.programButton.setBackground(Color.DARK_GRAY);
             this.programButton.setForeground(Color.WHITE);
             this.programButton.setFont(new Font("Segoe", Font.BOLD, 18));
-            this.programButton.setBorder(new CompoundBorder(new EmptyBorder(5,5,5,5), new LineBorder(Color.RED)));
+            this.programButton.setBorder(new CompoundBorder(new EmptyBorder(5, 5, 5, 5), new LineBorder(Color.RED)));
             this.programButton.addActionListener(e -> programSourceChanged.accept(videoSourceIndex));
         }
 
@@ -239,7 +228,7 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
         JPanel panel1 = new JPanel();
         buttonToggleLyrics = new JButton();
-        buttonFadeToBlack = new JButton();
+        buttonVolume = new JButton();
         buttonCut = new JButton();
         buttonFade = new JButton();
         JPanel panel2 = new JPanel();
@@ -273,14 +262,14 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
             buttonToggleLyrics.setName("buttonToggleLyrics");
             panel1.add(buttonToggleLyrics);
 
-            //---- buttonFadeToBlack ----
-            buttonFadeToBlack.setText("<html>Fade to<br>Black</html>");
-            buttonFadeToBlack.setForeground(Color.cyan);
-            buttonFadeToBlack.setBackground(Color.darkGray);
-            buttonFadeToBlack.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            buttonFadeToBlack.setPreferredSize(new Dimension(120, 50));
-            buttonFadeToBlack.setName("buttonFadeToBlack");
-            panel1.add(buttonFadeToBlack);
+            //---- buttonVolume ----
+            buttonVolume.setText("Volume");
+            buttonVolume.setForeground(Color.cyan);
+            buttonVolume.setBackground(Color.darkGray);
+            buttonVolume.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            buttonVolume.setPreferredSize(new Dimension(120, 50));
+            buttonVolume.setName("buttonVolume");
+            panel1.add(buttonVolume);
 
             //---- buttonCut ----
             buttonCut.setText("CUT");
@@ -363,7 +352,7 @@ public class BroadcastSwitcherControlPanelUi extends AbstractBroadcastSwitcherUi
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
     private JButton buttonToggleLyrics;
-    private JButton buttonFadeToBlack;
+    private JButton buttonVolume;
     private JButton buttonCut;
     private JButton buttonFade;
     private JPanel panelProgPrevButtonHolder;

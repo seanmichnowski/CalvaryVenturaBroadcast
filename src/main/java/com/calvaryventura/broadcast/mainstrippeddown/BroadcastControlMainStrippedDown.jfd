@@ -1,0 +1,140 @@
+JFDML JFormDesigner: "8.0.3.0.246" Java: "17.0.6" encoding: "UTF-8"
+
+new FormModel {
+	contentType: "form/swing"
+	root: new FormRoot {
+		add( new FormWindow( "javax.swing.JFrame", new FormLayoutManager( class java.awt.BorderLayout ) ) {
+			name: "this"
+			"title": "Default Title Overwritten by Config File"
+			"font": new java.awt.Font( "Dialog", 0, 14 )
+			"defaultCloseOperation": 3
+			"background": sfield java.awt.Color black
+			"minimumSize": new java.awt.Dimension( 400, 600 )
+			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/icons/camera_fullsize.png" )
+			add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+				"$columnSpecs": "0:1.0"
+				"$rowSpecs": "0:1.0, 0"
+				"$alignTop": true
+				"$alignLeft": true
+				"$vGap": 10
+			} ) {
+				name: "panel1"
+				"background": sfield java.awt.Color black
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridLayout ) {
+					"hgap": 10
+				} ) {
+					name: "parentPtzCamerasPanel"
+					"opaque": false
+					"border": new javax.swing.border.EmptyBorder( 0, 0, 0, 0 )
+					"preferredSize": new java.awt.Dimension( 673, 10 )
+					"minimumSize": new java.awt.Dimension( 0, 0 )
+					"requestFocusEnabled": false
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+					"$columnSpecs": "0, 0, 0, right:0:1.0"
+					"$rowSpecs": "0"
+					"$hGap": 10
+					"$vGap": 5
+					"$alignLeft": true
+					"$alignTop": true
+				} ) {
+					name: "videoSwitcherPanel"
+					"opaque": false
+					add( new FormComponent( "javax.swing.JButton" ) {
+						name: "buttonToggleLyrics"
+						"text": "<html>Toggle<br>Lyrics</html>"
+						"foreground": sfield java.awt.Color cyan
+						"background": sfield java.awt.Color darkGray
+						"font": &Font0 new java.awt.Font( "Segoe UI", 1, 20 )
+					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+					add( new FormComponent( "javax.swing.JButton" ) {
+						name: "buttonVolume"
+						"text": "Volume"
+						"foreground": sfield java.awt.Color cyan
+						"background": sfield java.awt.Color darkGray
+						"font": #Font0
+						"preferredSize": new java.awt.Dimension( 120, 50 )
+					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+						"gridx": 1
+					} )
+					add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+						"$columnSpecs": "0:1.0"
+						"$rowSpecs": "0:1.0, 0:1.0"
+						"$hGap": 20
+						"$vGap": 5
+						"$alignTop": true
+						"$alignLeft": true
+					} ) {
+						name: "panel3"
+						"opaque": false
+						auxiliary() {
+							"JavaCodeGenerator.variableLocal": true
+						}
+						add( new FormComponent( "javax.swing.JLabel" ) {
+							name: "labelPreview"
+							"background": sfield java.awt.Color black
+							"font": &Font1 new java.awt.Font( "Segoe UI", 1, 14 )
+							"horizontalAlignment": 2
+							"text": "Preview:"
+							"foreground": sfield java.awt.Color white
+						}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+						add( new FormComponent( "javax.swing.JLabel" ) {
+							name: "labelProgram"
+							"text": "Program:"
+							"foreground": sfield java.awt.Color white
+							"background": sfield java.awt.Color black
+							"font": #Font1
+							"horizontalAlignment": 2
+							"maximumSize": &Dimension0 new java.awt.Dimension( 150, 15 )
+						}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+							"gridy": 1
+						} )
+					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+						"gridx": 2
+					} )
+					add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
+						"$columnSpecs": "0:1.0"
+						"$rowSpecs": "0:1.0, 0:1.0"
+						"$hGap": 20
+						"$vGap": 5
+						"$alignTop": true
+						"$alignLeft": true
+					} ) {
+						name: "panel2"
+						"opaque": false
+						auxiliary() {
+							"JavaCodeGenerator.variableLocal": true
+						}
+						add( new FormComponent( "javax.swing.JLabel" ) {
+							name: "labelTransitionInProgress"
+							"background": sfield java.awt.Color black
+							"font": #Font1
+							"horizontalAlignment": 2
+							"text": "Transition In Progress..."
+						}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
+						add( new FormComponent( "javax.swing.JLabel" ) {
+							name: "labelConnectionStatus"
+							"text": "Switcher not connected :("
+							"foreground": sfield java.awt.Color red
+							"background": sfield java.awt.Color black
+							"font": #Font1
+							"horizontalAlignment": 2
+							"maximumSize": #Dimension0
+						}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+							"gridy": 1
+						} )
+					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+						"gridx": 3
+					} )
+				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
+					"gridy": 1
+				} )
+			}, new FormLayoutConstraints( class java.lang.String ) {
+				"value": "Center"
+			} )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 0, 5 )
+			"size": new java.awt.Dimension( 660, 505 )
+		} )
+	}
+}
