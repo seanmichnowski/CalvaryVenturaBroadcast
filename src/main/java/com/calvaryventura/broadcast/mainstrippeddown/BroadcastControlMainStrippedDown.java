@@ -2,13 +2,13 @@ package com.calvaryventura.broadcast.mainstrippeddown;
 
 import java.awt.GridLayout;
 import javax.swing.JButton;
+import javax.swing.JSlider;
 import javax.swing.SwingConstants;
 import com.calvaryventura.broadcast.ptzcamera.control.PtzCameraController;
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
 import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
 import com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi;
-import com.calvaryventura.broadcast.uiwidgets.PopupVolumeUi;
 import com.calvaryventura.broadcast.uiwidgets.TitledBorderCreator;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
@@ -30,14 +30,11 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 /**
@@ -50,6 +47,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
+    private boolean muteOn = false;
 
     /**
      * Main entry point for application.
@@ -85,16 +83,20 @@ public class BroadcastControlMainStrippedDown extends JFrame
         logger.info("Starting connection to video switcher, multiview={}", BroadcastSettings.getInst().isVideoSwitcherMultiviewEnabled() ? "enabled" : "disabled");
         this.videoSwitcherPanel.setBorder(TitledBorderCreator.createTitledBorder("Video Switcher"));
 
-        final PopupVolumeUi popupVolumeUi = new PopupVolumeUi();
-        popupVolumeUi.setPopupShownHiddenAction(this.switcherCommandSender::enableSendingLiveAudioLevels);
-        popupVolumeUi.setFaderMovedAction(this.switcherCommandSender::setMasterAudioLevel);
-        this.buttonVolume.addActionListener(e -> popupVolumeUi.showVolumePopup());
+        // mute button
+        this.buttonToggleMute.addActionListener(e -> {
+            if (this.switcherCommandSender.setMasterAudioLevel(this.muteOn ? 1.0 : 0.0)) // send opposite to the current mute state
+            {
+                this.muteOn = !this.muteOn;
+                this.buttonToggleMute.setBackground(this.muteOn ? Color.RED : Color.DARK_GRAY);
+            }
+        });
 
-        this.buttonToggleLyrics.addActionListener(e -> switcherCommandSender.toggleKeyerOnAirEnabled());
+        // lyrics button (upstream keyer)
+        this.buttonToggleLyrics.addActionListener(e -> this.switcherCommandSender.toggleKeyerOnAirEnabled());
 
         // connections for the switcher's status to get updated on the UI control panel
         this.switcherCommandSender.addUpstreamKeyOnAirConsumer(lyricsOn -> this.buttonToggleLyrics.setBackground(lyricsOn ? Color.RED : Color.DARK_GRAY));
-        this.switcherCommandSender.addLiveAudioLevelDbConsumer(popupVolumeUi::setLiveVolumeMeterLevel);
         this.switcherCommandSender.addTransitionInProgressConsumer(active -> this.labelTransitionInProgress.setForeground(active ? Color.YELLOW : Color.BLACK));
         this.switcherCommandSender.addConnectionStatusConsumer(connected -> {
             this.labelConnectionStatus.setText(connected ? "Switcher connected :)" : "Switcher not connected :(");
@@ -124,13 +126,11 @@ public class BroadcastControlMainStrippedDown extends JFrame
         // after UI initialization is done, finally start the connection to the switcher
         this.switcherCommandSender.initialize(BroadcastSettings.getInst().getSwitcherIp());
 
-        // TODO start here.. add
-        // https://forums.raspberrypi.com/viewtopic.php?t=271194
-        // https://stackoverflow.com/questions/28841139/how-to-get-coordinates-of-touchscreen-rawdata-using-linux
-        // https://stackoverflow.com/questions/6990978/how-can-i-know-which-of-the-dev-input-eventx-x-0-7-have-the-linux-input-stre
-        //this.switcherCommandSender.setPreviewVideo()
-        //this.switcherCommandSender.performCut();
-        //this.switcherCommandSender.performAuto();
+        // set up for monitoring the multiview display's touchscreen, so we can command the video switcher
+        new BroadcastTouchscreenInputDevice().initializeTouchscreenCallbacks((xPercent, yPercent) -> {
+            logger.info("Touchscreen! X={}%, Y={}%", xPercent, yPercent);
+            this.handleMultiviewPanelTouchscreenEvent(xPercent, yPercent, this.switcherCommandSender);
+        });
 
         // finally, show the frame maximized!
         this.setVisible(true);
@@ -183,8 +183,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
         }
 
         /**
-         * TODO
-         * @param active
+         * @param active when true, we display a red "ACTIVE" in the camera pan/tilt trackpad
          */
         private void setCameraActive(boolean active)
         {
@@ -194,61 +193,43 @@ public class BroadcastControlMainStrippedDown extends JFrame
     }
 
     /**
-     * Since the video plays in a VLC rendered canvas, we can't control where exactly the video shows up.
-     * All we know is (1) the video player gives the overall WxH of the video (before resizing),
-     * (2) the canvas scales down the video to fully fit either the width or the height dimension, whichever
-     * one is smaller, (3) we know where the mouse clicks happen within the physical bounds of the whole canvas.
-     * From all this, we can calculate the expected bounds of the actual playing video inside the canvas,
-     * after the automatic resizing to fit the canvas. From there we determine which X/Y box the mouse click
-     * occurred, based on the divisions specified in the config file. Then we map an X/Y box to a video source,
-     * and finally perform the appropriate action on that video source/box being selected.
+     * Specify the X and Y percents of the touchscreen press event,
+     * and this method commands the switcher to perform one of the transition actions.
+     * @param xPercent x percent of the touch event 0.0-1.0 (referenced to the upper-left corner)
+     * @param yPercent y percent of the touch event 0.0-1.0 (referenced to the upper-left corner)
+     * @param switcherCommandSender handle to the video switcher for sending the transition commands
      */
-    private void initializeMouseSelectionOnMultiviewPanel(JPanel videoCanvas, BlackmagicAtemSwitcherUserLayer switcherCommandSender)
+    private void handleMultiviewPanelTouchscreenEvent(double xPercent, double yPercent, BlackmagicAtemSwitcherUserLayer switcherCommandSender)
     {
+        // based on the mouse percent INTO the playing video's rectangle, determine which grid box WITHIN the video we clicked inside (starts at 0 for X and Y and referenced from the upper-left corner)
         final BroadcastSettings settings = BroadcastSettings.getInst();
-        videoCanvas.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mousePressed(MouseEvent e)
-            {
-                // based on the mouse percent INTO the playing video's rectangle, determine which grid box WITHIN the video we clicked inside (starts at 0 for X and Y and referenced from the upper-left corner)
-                final double xPercent = (double) e.getX() / videoCanvas.getWidth();
-                final double yPercent = (double) e.getY() / videoCanvas.getHeight();
-                final int xGridBoxMouseLoc = (int) (xPercent * settings.getVideoSwitcherMultiviewNumColumnDivisions());
-                final int yGridBoxMouseLoc = (int) (yPercent * settings.getVideoSwitcherMultiviewNumRowDivisions());
-                final Point mouseClickGridBox = new Point(xGridBoxMouseLoc, yGridBoxMouseLoc);
+        final int xGridBoxMouseLoc = (int) (xPercent * settings.getVideoSwitcherMultiviewNumColumnDivisions());
+        final int yGridBoxMouseLoc = (int) (yPercent * settings.getVideoSwitcherMultiviewNumRowDivisions());
+        final Point mouseClickGridBox = new Point(xGridBoxMouseLoc, yGridBoxMouseLoc);
 
-                // find which multiview pane the user is clicking inside
-                if (e.getClickCount() == 1 && settings.getVideoSwitcherMultiviewPreviewPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
-                {
-                    switcherCommandSender.performAuto(); // pressing in the "PREVIEW" pane triggers a fade transition
-                } else if (e.getClickCount() == 1 && settings.getVideoSwitcherMultiviewProgramPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
-                {
-                    switcherCommandSender.performCut(); // pressing in the "PROGRAM" pane triggers a cut transition
-                } else
-                {
-                    IntStream.range(0, settings.getVideoSwitcherMultiviewInputsGridBoxes().size()).boxed()
-                            .filter(inputIdx -> settings.getVideoSwitcherMultiviewInputsGridBoxes().get(inputIdx).equals(mouseClickGridBox))
-                            .findFirst().ifPresent(gridBoxIdx ->
-                            {
-                                // map the index of the source grid box to the ACTUAL HDMI input and HDMI name for the switcher's input channel
-                                final Map<String, Integer> switcherVideoNamesAndIndexes = settings.getSwitcherVideoNamesAndIndexes();
-                                final int switcherSourceIdx = new ArrayList<>(switcherVideoNamesAndIndexes.values()).get(gridBoxIdx);
-                                final String switcherSourceName = new ArrayList<>(switcherVideoNamesAndIndexes.keySet()).get(gridBoxIdx);
-                                if (e.getClickCount() == 1)
-                                {
-                                    logger.info("Changing to preview video input idx={} name={}", switcherSourceIdx, switcherSourceName);
-                                    switcherCommandSender.setPreviewVideo(switcherSourceIdx);
-                                } else if (e.getClickCount() == 2)
-                                {
-                                    logger.info("Changing to program video input idx={} name={}", switcherSourceIdx, switcherSourceName);
-                                    switcherCommandSender.setPreviewVideo(switcherSourceIdx);
-                                    switcherCommandSender.performAuto();
-                                }
-                            });
-                }
-            }
-        });
+        // find which multiview pane the user is clicking inside
+        if (settings.getVideoSwitcherMultiviewPreviewPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
+        {
+            logger.info("Performing FADE");
+            switcherCommandSender.performAuto(); // pressing in the "PREVIEW" pane triggers a fade transition
+        } else if (settings.getVideoSwitcherMultiviewProgramPaneGridBoxes().stream().anyMatch(gridPoint -> gridPoint.equals(mouseClickGridBox)))
+        {
+            logger.info("Performing CUT");
+            switcherCommandSender.performCut(); // pressing in the "PROGRAM" pane triggers a cut transition
+        } else
+        {
+            IntStream.range(0, settings.getVideoSwitcherMultiviewInputsGridBoxes().size()).boxed()
+                    .filter(inputIdx -> settings.getVideoSwitcherMultiviewInputsGridBoxes().get(inputIdx).equals(mouseClickGridBox))
+                    .findFirst().ifPresent(gridBoxIdx ->
+                    {
+                        // map the index of the source grid box to the ACTUAL HDMI input and HDMI name for the switcher's input channel
+                        final Map<String, Integer> switcherVideoNamesAndIndexes = settings.getSwitcherVideoNamesAndIndexes();
+                        final int switcherSourceIdx = new ArrayList<>(switcherVideoNamesAndIndexes.values()).get(gridBoxIdx);
+                        final String switcherSourceName = new ArrayList<>(switcherVideoNamesAndIndexes.keySet()).get(gridBoxIdx);
+                        logger.info("Changing to preview video input idx={} name={}", switcherSourceIdx, switcherSourceName);
+                        switcherCommandSender.setPreviewVideo(switcherSourceIdx);
+                    });
+        }
     }
 
     /**
@@ -262,7 +243,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
         parentPtzCamerasPanel = new JPanel();
         videoSwitcherPanel = new JPanel();
         buttonToggleLyrics = new JButton();
-        buttonVolume = new JButton();
+        buttonToggleMute = new JButton();
         JPanel panel3 = new JPanel();
         labelPreview = new JLabel();
         labelProgram = new JLabel();
@@ -323,18 +304,17 @@ public class BroadcastControlMainStrippedDown extends JFrame
                 buttonToggleLyrics.setName("buttonToggleLyrics");
                 videoSwitcherPanel.add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 10), 0, 0));
+                    new Insets(0, 0, 0, 15), 0, 0));
 
-                //---- buttonVolume ----
-                buttonVolume.setText("Volume");
-                buttonVolume.setForeground(Color.cyan);
-                buttonVolume.setBackground(Color.darkGray);
-                buttonVolume.setFont(new Font("Segoe UI", Font.BOLD, 20));
-                buttonVolume.setPreferredSize(new Dimension(120, 50));
-                buttonVolume.setName("buttonVolume");
-                videoSwitcherPanel.add(buttonVolume, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+                //---- buttonToggleMute ----
+                buttonToggleMute.setText("MUTE");
+                buttonToggleMute.setForeground(Color.cyan);
+                buttonToggleMute.setBackground(Color.darkGray);
+                buttonToggleMute.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                buttonToggleMute.setName("buttonToggleMute");
+                videoSwitcherPanel.add(buttonToggleMute, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 10), 0, 0));
+                    new Insets(0, 0, 0, 15), 0, 0));
 
                 //======== panel3 ========
                 {
@@ -371,7 +351,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
                 }
                 videoSwitcherPanel.add(panel3, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 10), 0, 0));
+                    new Insets(0, 0, 0, 15), 0, 0));
 
                 //======== panel2 ========
                 {
@@ -424,7 +404,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
     private JPanel parentPtzCamerasPanel;
     private JPanel videoSwitcherPanel;
     private JButton buttonToggleLyrics;
-    private JButton buttonVolume;
+    private JButton buttonToggleMute;
     private JLabel labelPreview;
     private JLabel labelProgram;
     private JLabel labelTransitionInProgress;

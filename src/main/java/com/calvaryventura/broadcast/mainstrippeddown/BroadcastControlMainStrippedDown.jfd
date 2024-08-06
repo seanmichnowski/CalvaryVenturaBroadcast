@@ -33,7 +33,7 @@ new FormModel {
 				add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class java.awt.GridBagLayout ) {
 					"$columnSpecs": "0, 0, 0, right:0:1.0"
 					"$rowSpecs": "0"
-					"$hGap": 10
+					"$hGap": 15
 					"$vGap": 5
 					"$alignLeft": true
 					"$alignTop": true
@@ -48,12 +48,11 @@ new FormModel {
 						"font": &Font0 new java.awt.Font( "Segoe UI", 1, 20 )
 					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) )
 					add( new FormComponent( "javax.swing.JButton" ) {
-						name: "buttonVolume"
-						"text": "Volume"
+						name: "buttonToggleMute"
+						"text": "MUTE"
 						"foreground": sfield java.awt.Color cyan
 						"background": sfield java.awt.Color darkGray
 						"font": #Font0
-						"preferredSize": new java.awt.Dimension( 120, 50 )
 					}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 						"gridx": 1
 					} )
