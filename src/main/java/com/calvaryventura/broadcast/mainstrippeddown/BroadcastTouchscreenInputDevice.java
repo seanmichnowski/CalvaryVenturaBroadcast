@@ -11,10 +11,8 @@ import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * TODO
@@ -48,7 +46,7 @@ public class BroadcastTouchscreenInputDevice
                 // get the name of the linux input event ID corresponding to the touchscreen
                 final List<String> touchscreenEventIds = getEvtestEventIdsForAllTouchscreens();
 
-                // use dmesg to find all touchscreens in the system, and return the first physical-location-USB one
+                // use the /dev/input listing to find which touchscreen input event maps to which order of USB devices
                 final String multiviewTouchscreenId = determineWhichTouchscreenIdToUse(touchscreenEventIds);
 
                 // create a background loop which opens the multiview touchscreen's events and fires callbacks on touches
@@ -241,7 +239,23 @@ public class BroadcastTouchscreenInputDevice
 
     /**
      * Out of all touchscreens in the system, there doesn't seem to be an elegant way of
-     * determining which one is the actual multiview screen.
+     * determining which one is the actual multiview screen. So we list out "/dev/input/by-path"
+     * and note that the symlink is mapped to the same event number used in 'evtest.'
+     * <p>
+     * We assert that the multiview touchscreen will be the LAST device in the list of multiview
+     * touchscreen devices, so we pick the "/dev/input" listing event that comes last to map to
+     * a touchscreen device in the 'evtest' output. If the touchscreens are still getting out of order,
+     * try swapping their USB connections and reboot the host computer.
+     * <p>
+     * Example output from /dev/input/by-path:
+     * lrwxrwxrwx 1 root root 10 Aug  1 14:40 pci-0000:00:14.0-usb-0:11:1.0-event -> ../event11
+     * lrwxrwxrwx 1 root root 10 Aug  1 14:40 pci-0000:00:14.0-usb-0:11:1.2-event -> ../event12
+     * lrwxrwxrwx 1 root root 10 Aug  1 17:36 pci-0000:00:15.1-platform-i2c_designware.1-event -> ../event21
+     * lrwxrwxrwx 1 root root 10 Aug  1 17:36 pci-0000:00:15.1-platform-i2c_designware.1-event-mouse -> ../event20
+     * lrwxrwxrwx 1 root root  9 Aug  1 17:36 pci-0000:00:15.1-platform-i2c_designware.1-mouse -> ../mouse2
+     * lrwxrwxrwx 1 root root  9 Aug  1 14:40 platform-i8042-serio-0-event-kbd -> ../event4
+     * lrwxrwxrwx 1 root root  9 Aug  1 14:40 platform-INT33D5:00-event -> ../event9
+     * lrwxrwxrwx 1 root root 10 Aug  1 14:40 platform-PNP0C14:05-event -> ../event10
      *
      * @param touchscreenIds ID's from {@link #getEvtestEventIdsForAllTouchscreens()} corresponding to all touchscreens in the system
      * @return ID of the touchscreen corresponding to the actual broadcast switcher's multiview screen in the system
@@ -249,17 +263,30 @@ public class BroadcastTouchscreenInputDevice
     private static String determineWhichTouchscreenIdToUse(List<String> touchscreenIds) throws Exception
     {
         // find all touch screen USB devices in the system
-        final AtomicInteger idxOf0thTouchscreen = new AtomicInteger();
-        final Process process = Runtime.getRuntime().exec("dmesg | grep usb | grep touch");
+        final Process process = Runtime.getRuntime().exec("ls -l /dev/input/by-path/ | grep event");
         try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream())))
         {
-            // pull all lines from the dmesg process
-            final List<String> lines = in.lines().collect(Collectors.toList());
-            logger.info("DMESG lines when searching for touchscreen: {}", Arrays.toString(lines.toArray()));
+            // pull all lines from the ls process and keep ONLY the last portion, the "eventXX" mapping from the symlink
+            final List<String> eventListings = in.lines().filter(l -> l.contains("/event"))
+                    .map(l -> l.substring(l.lastIndexOf("/event") + 1).trim()).collect(Collectors.toList());
+            logger.info("All event listings in the system: {}", Arrays.toString(eventListings.toArray()));
 
-            // find the index of the dmesg USB touchscreen listing containing the string we EXPECT to find our multiview on (first port)
-            IntStream.range(0, lines.size()).boxed().filter(idx -> lines.get(idx).contains("0-1")).findFirst().ifPresent(idxOf0thTouchscreen::set);
+            // start at the LAST event listing (ie. "[event11, event12, event21, event20, event4, event9, event10]" etc.)
+            // and as soon as we find an event in the touchscreen ID list, that's the one we use!
+            for (int i = eventListings.size() - 1; i >= 0; i--)
+            {
+                for (String touchscreenId : touchscreenIds)
+                {
+                    if (touchscreenId.trim().endsWith(eventListings.get(i)))
+                    {
+                        return touchscreenId;
+                    }
+                }
+            }
+
+            // getting here means we couldn't find a matching
+            logger.error("Unable to find any event listings for touchscreen(s) in the system");
+            return touchscreenIds.isEmpty() ? "UNKNOWN" : touchscreenIds.get(0);
         }
-        return touchscreenIds.get(idxOf0thTouchscreen.get());
     }
 }

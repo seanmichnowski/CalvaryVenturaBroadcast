@@ -19,6 +19,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
@@ -100,7 +101,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
         this.switcherCommandSender.addTransitionInProgressConsumer(active -> this.labelTransitionInProgress.setForeground(active ? Color.YELLOW : Color.BLACK));
         this.switcherCommandSender.addConnectionStatusConsumer(connected -> {
             this.labelConnectionStatus.setText(connected ? "Switcher connected :)" : "Switcher not connected :(");
-            this.labelConnectionStatus.setForeground(connected ? Color.GREEN : Color.RED);
+            this.labelConnectionStatus.setForeground(connected ? Color.GREEN.darker() : Color.RED.darker());
             if (!connected)
             {
                 this.labelProgram.setText("Program: ---");
@@ -134,7 +135,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
 
         // finally, show the frame maximized!
         this.setVisible(true);
-        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        SwingUtilities.invokeLater(() -> this.setExtendedState(JFrame.MAXIMIZED_BOTH));
     }
 
     /**
@@ -159,7 +160,7 @@ public class BroadcastControlMainStrippedDown extends JFrame
             // create the controller and a status label on the top
             this.connectionStatusLabel.setText(ptzCameraName);
             final PtzCameraController controller = new PtzCameraController(ptzCameraName, ipAddress, conn -> {
-                this.connectionStatusLabel.setText(conn ? "Connected" : "Not connected");
+                this.connectionStatusLabel.setText(conn ? "Connected :)" : "Not connected :(");
                 this.connectionStatusLabel.setForeground(conn ? Color.GREEN.darker() : Color.RED.darker());
             });
 
