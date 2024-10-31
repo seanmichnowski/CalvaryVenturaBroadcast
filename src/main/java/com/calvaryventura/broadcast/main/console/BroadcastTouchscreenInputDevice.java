@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.mainstrippeddown;
+package com.calvaryventura.broadcast.main.console;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

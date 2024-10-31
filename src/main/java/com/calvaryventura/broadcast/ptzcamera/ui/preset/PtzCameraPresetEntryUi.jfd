@@ -71,6 +71,7 @@ new FormModel {
 					"iconTextGap": 2
 					"opaque": false
 					"toolTipText": "EDIT this preset"
+					"selectedIcon": new com.jformdesigner.model.SwingIcon( 0, "/icons/lamp_32x32.png" )
 				}, new FormLayoutConstraints( class com.jformdesigner.runtime.GridBagConstraintsEx ) {
 					"gridx": 2
 					"gridheight": 2

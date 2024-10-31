@@ -183,12 +183,12 @@ public class PtzCameraPresetEntryUi extends JPanel
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        panelContent = new JPanel();
-        labelCameraName = new JLabel();
-        buttonGoTo = new JButton();
-        textFieldName = new JTextField();
-        buttonEdit = new JToggleButton();
-        labelReorder = new JLabel();
+        this.panelContent = new JPanel();
+        this.labelCameraName = new JLabel();
+        this.buttonGoTo = new JButton();
+        this.textFieldName = new JTextField();
+        this.buttonEdit = new JToggleButton();
+        this.labelReorder = new JLabel();
 
         //======== this ========
         setBorder(new EmptyBorder(12, 0, 12, 0));
@@ -201,89 +201,90 @@ public class PtzCameraPresetEntryUi extends JPanel
 
         //======== panelContent ========
         {
-            panelContent.setBorder(new CompoundBorder(
+            this.panelContent.setBorder(new CompoundBorder(
                 new LineBorder(new Color(0xcc00cc), 2),
                 new CompoundBorder(
                     new SoftBevelBorder(SoftBevelBorder.LOWERED),
                     new EmptyBorder(2, 2, 2, 2))));
-            panelContent.setBackground(new Color(0x660066));
-            panelContent.setMinimumSize(new Dimension(249, 70));
-            panelContent.setPreferredSize(new Dimension(269, 70));
-            panelContent.setMaximumSize(new Dimension(2147483647, 70));
-            panelContent.setName("panelContent");
-            panelContent.setLayout(new GridBagLayout());
-            ((GridBagLayout)panelContent.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
-            ((GridBagLayout)panelContent.getLayout()).rowHeights = new int[] {0, 0, 0};
-            ((GridBagLayout)panelContent.getLayout()).columnWeights = new double[] {0.0, 1.0, 0.0, 0.0, 1.0E-4};
-            ((GridBagLayout)panelContent.getLayout()).rowWeights = new double[] {0.0, 1.0, 1.0E-4};
+            this.panelContent.setBackground(new Color(0x660066));
+            this.panelContent.setMinimumSize(new Dimension(249, 70));
+            this.panelContent.setPreferredSize(new Dimension(269, 70));
+            this.panelContent.setMaximumSize(new Dimension(2147483647, 70));
+            this.panelContent.setName("panelContent");
+            this.panelContent.setLayout(new GridBagLayout());
+            ((GridBagLayout)this.panelContent.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
+            ((GridBagLayout)this.panelContent.getLayout()).rowHeights = new int[] {0, 0, 0};
+            ((GridBagLayout)this.panelContent.getLayout()).columnWeights = new double[] {0.0, 1.0, 0.0, 0.0, 1.0E-4};
+            ((GridBagLayout)this.panelContent.getLayout()).rowWeights = new double[] {0.0, 1.0, 1.0E-4};
 
             //---- labelCameraName ----
-            labelCameraName.setText("Camera Name");
-            labelCameraName.setForeground(new Color(0x00a52c));
-            labelCameraName.setName("labelCameraName");
-            panelContent.add(labelCameraName, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+            this.labelCameraName.setText("Camera Name");
+            this.labelCameraName.setForeground(new Color(0x00a52c));
+            this.labelCameraName.setName("labelCameraName");
+            this.panelContent.add(this.labelCameraName, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 6), 0, 0));
 
             //---- buttonGoTo ----
-            buttonGoTo.setToolTipText("GOTO this preset camera angle");
-            buttonGoTo.setIcon(new ImageIcon(getClass().getResource("/icons/green_arrow_24x24.png")));
-            buttonGoTo.setHorizontalTextPosition(SwingConstants.LEADING);
-            buttonGoTo.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonGoTo.setMaximumSize(new Dimension(50, 46));
-            buttonGoTo.setMinimumSize(new Dimension(50, 46));
-            buttonGoTo.setPreferredSize(new Dimension(50, 46));
-            buttonGoTo.setForeground(new Color(0x00a52c));
-            buttonGoTo.setBackground(Color.darkGray);
-            buttonGoTo.setIconTextGap(2);
-            buttonGoTo.setName("buttonGoTo");
-            panelContent.add(buttonGoTo, new GridBagConstraints(0, 0, 1, 2, 0.0, 0.0,
+            this.buttonGoTo.setToolTipText("GOTO this preset camera angle");
+            this.buttonGoTo.setIcon(new ImageIcon(getClass().getResource("/icons/green_arrow_24x24.png")));
+            this.buttonGoTo.setHorizontalTextPosition(SwingConstants.LEADING);
+            this.buttonGoTo.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            this.buttonGoTo.setMaximumSize(new Dimension(50, 46));
+            this.buttonGoTo.setMinimumSize(new Dimension(50, 46));
+            this.buttonGoTo.setPreferredSize(new Dimension(50, 46));
+            this.buttonGoTo.setForeground(new Color(0x00a52c));
+            this.buttonGoTo.setBackground(Color.darkGray);
+            this.buttonGoTo.setIconTextGap(2);
+            this.buttonGoTo.setName("buttonGoTo");
+            this.panelContent.add(this.buttonGoTo, new GridBagConstraints(0, 0, 1, 2, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 6), 0, 0));
 
             //---- textFieldName ----
-            textFieldName.setText("Name");
-            textFieldName.setHorizontalAlignment(SwingConstants.CENTER);
-            textFieldName.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            textFieldName.setForeground(new Color(0x00cccc));
-            textFieldName.setBackground(Color.black);
-            textFieldName.setSelectionColor(Color.yellow);
-            textFieldName.setOpaque(false);
-            textFieldName.setName("textFieldName");
-            panelContent.add(textFieldName, new GridBagConstraints(1, 1, 1, 1, 0.0, 0.0,
+            this.textFieldName.setText("Name");
+            this.textFieldName.setHorizontalAlignment(SwingConstants.CENTER);
+            this.textFieldName.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            this.textFieldName.setForeground(new Color(0x00cccc));
+            this.textFieldName.setBackground(Color.black);
+            this.textFieldName.setSelectionColor(Color.yellow);
+            this.textFieldName.setOpaque(false);
+            this.textFieldName.setName("textFieldName");
+            this.panelContent.add(this.textFieldName, new GridBagConstraints(1, 1, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 6), 0, 0));
 
             //---- buttonEdit ----
-            buttonEdit.setIcon(new ImageIcon(getClass().getResource("/icons/edit_red_34h.png")));
-            buttonEdit.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            buttonEdit.setHorizontalTextPosition(SwingConstants.LEADING);
-            buttonEdit.setForeground(new Color(0xcc6600));
-            buttonEdit.setPreferredSize(new Dimension(40, 30));
-            buttonEdit.setMinimumSize(new Dimension(40, 30));
-            buttonEdit.setMaximumSize(new Dimension(100, 30));
-            buttonEdit.setBackground(Color.darkGray);
-            buttonEdit.setIconTextGap(2);
-            buttonEdit.setOpaque(false);
-            buttonEdit.setToolTipText("EDIT this preset");
-            buttonEdit.setName("buttonEdit");
-            panelContent.add(buttonEdit, new GridBagConstraints(2, 0, 1, 2, 0.0, 0.0,
+            this.buttonEdit.setIcon(new ImageIcon(getClass().getResource("/icons/edit_red_34h.png")));
+            this.buttonEdit.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            this.buttonEdit.setHorizontalTextPosition(SwingConstants.LEADING);
+            this.buttonEdit.setForeground(new Color(0xcc6600));
+            this.buttonEdit.setPreferredSize(new Dimension(40, 30));
+            this.buttonEdit.setMinimumSize(new Dimension(40, 30));
+            this.buttonEdit.setMaximumSize(new Dimension(100, 30));
+            this.buttonEdit.setBackground(Color.darkGray);
+            this.buttonEdit.setIconTextGap(2);
+            this.buttonEdit.setOpaque(false);
+            this.buttonEdit.setToolTipText("EDIT this preset");
+            this.buttonEdit.setSelectedIcon(new ImageIcon(getClass().getResource("/icons/lamp_32x32.png")));
+            this.buttonEdit.setName("buttonEdit");
+            this.panelContent.add(this.buttonEdit, new GridBagConstraints(2, 0, 1, 2, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 6), 0, 0));
 
             //---- labelReorder ----
-            labelReorder.setForeground(new Color(0x00a52c));
-            labelReorder.setPreferredSize(new Dimension(40, 0));
-            labelReorder.setMinimumSize(new Dimension(40, 0));
-            labelReorder.setIcon(new ImageIcon(getClass().getResource("/icons/blue_move_arrows_32x32.png")));
-            labelReorder.setHorizontalAlignment(SwingConstants.CENTER);
-            labelReorder.setBorder(new LineBorder(Color.lightGray));
-            labelReorder.setName("labelReorder");
-            panelContent.add(labelReorder, new GridBagConstraints(3, 0, 1, 2, 0.0, 0.0,
+            this.labelReorder.setForeground(new Color(0x00a52c));
+            this.labelReorder.setPreferredSize(new Dimension(40, 0));
+            this.labelReorder.setMinimumSize(new Dimension(40, 0));
+            this.labelReorder.setIcon(new ImageIcon(getClass().getResource("/icons/blue_move_arrows_32x32.png")));
+            this.labelReorder.setHorizontalAlignment(SwingConstants.CENTER);
+            this.labelReorder.setBorder(new LineBorder(Color.lightGray));
+            this.labelReorder.setName("labelReorder");
+            this.panelContent.add(this.labelReorder, new GridBagConstraints(3, 0, 1, 2, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 0), 0, 0));
         }
-        add(panelContent, BorderLayout.CENTER);
+        add(this.panelContent, BorderLayout.CENTER);
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 

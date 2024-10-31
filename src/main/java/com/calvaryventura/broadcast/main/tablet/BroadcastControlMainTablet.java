@@ -1,4 +1,4 @@
-package com.calvaryventura.broadcast.main;
+package com.calvaryventura.broadcast.main.tablet;
 
 import java.awt.*;
 import java.lang.invoke.MethodHandles;
@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * same with the PTZ cameras. So all these are joined together in this
  * class. This is where most of the user logic lies.
  */
-public class BroadcastControlMain extends JFrame
+public class BroadcastControlMainTablet extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
@@ -45,13 +45,13 @@ public class BroadcastControlMain extends JFrame
     {
         BasicConfigurator.configure(); // logger
         logger.info("Starting Calvary Ventura Broadcast Control Interface...");
-        new BroadcastControlMain();
+        new BroadcastControlMainTablet();
     }
 
     /**
      * Initializes the major UI panels, etc.
      */
-    private BroadcastControlMain()
+    private BroadcastControlMainTablet()
     {
         // UI initialization
         this.initComponents();

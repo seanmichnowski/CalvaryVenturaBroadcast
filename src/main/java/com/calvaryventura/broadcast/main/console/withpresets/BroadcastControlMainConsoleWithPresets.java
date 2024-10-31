@@ -1,14 +1,11 @@
-package com.calvaryventura.broadcast.mainstrippeddown;
+package com.calvaryventura.broadcast.main.console.withpresets;
 
-import java.awt.GridLayout;
-import javax.swing.JButton;
-import javax.swing.JSlider;
-import javax.swing.SwingConstants;
+import com.calvaryventura.broadcast.main.console.BroadcastTouchscreenInputDevice;
 import com.calvaryventura.broadcast.ptzcamera.control.PtzCameraController;
+import com.calvaryventura.broadcast.ptzcamera.ui.IPtzCameraControllerUiCallback;
+import com.calvaryventura.broadcast.ptzcamera.ui.PtzCameraControllerUi;
 import com.calvaryventura.broadcast.settings.BroadcastSettings;
 import com.calvaryventura.broadcast.switcher.control.BlackmagicAtemSwitcherUserLayer;
-import com.calvaryventura.broadcast.uiwidgets.DirectionalTouchUi;
-import com.calvaryventura.broadcast.uiwidgets.HorizontalZoomTouchUi;
 import com.calvaryventura.broadcast.uiwidgets.TitledBorderCreator;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
@@ -16,12 +13,14 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
-import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
@@ -29,13 +28,14 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Point;
 import java.lang.invoke.MethodHandles;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 
 /**
@@ -44,10 +44,12 @@ import java.util.stream.IntStream;
  * same with the PTZ cameras. So all these are joined together in this
  * class. This is where most of the user logic lies.
  */
-public class BroadcastControlMainStrippedDown extends JFrame
+public class BroadcastControlMainConsoleWithPresets extends JFrame
 {
     private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final BlackmagicAtemSwitcherUserLayer switcherCommandSender = new BlackmagicAtemSwitcherUserLayer();
+    private final List<PtzCameraController> ptzCameraControllers = new ArrayList<>();
+    private final PtzCameraControllerUi ptzCameraUi;
     private boolean muteOn = false;
 
     /**
@@ -56,28 +58,70 @@ public class BroadcastControlMainStrippedDown extends JFrame
     public static void main(String[] args)
     {
         BasicConfigurator.configure(); // logger
-        logger.info("Starting Calvary Ventura Broadcast Control Interface. (Stripped down version, no camera presets.)");
-        new BroadcastControlMainStrippedDown();
+        logger.info("Starting Calvary Ventura Broadcast Control Interface...");
+        new BroadcastControlMainConsoleWithPresets();
     }
 
     /**
      * Initializes the major UI panels, etc.
      */
-    private BroadcastControlMainStrippedDown()
+    private BroadcastControlMainConsoleWithPresets()
     {
         // UI initialization
         this.initComponents();
         this.setLocationRelativeTo(null);
         this.setTitle(BroadcastSettings.getInst().getProgramTitle());
+        TitledBorderCreator.setBorderColor(Color.CYAN.darker());
+
+        // make all scroll bars wider, so they are easier to grab on a touchscreen
+        UIManager.put("ScrollBar.width", 30);
+
+        // connect LEFT camera UI panel actions
+        final IPtzCameraControllerUiCallback ptzCameraUiCallback = new IPtzCameraControllerUiCallback()
+        {
+            @Override
+            public boolean setPressed(int ptzCameraIdx, int presetIdx)
+            {
+                return ptzCameraControllers.get(ptzCameraIdx).savePreset(presetIdx);
+            }
+
+            @Override
+            public void callPressed(int ptzCameraIdx, int presetIdx)
+            {
+                // attempt to move the camera, also show this camera in the preview window
+                Executors.newSingleThreadExecutor().submit(() -> { // TODO is this OK???
+                    final boolean cameraMoveOk = ptzCameraControllers.get(ptzCameraIdx).moveToPreset(presetIdx);
+                    if (cameraMoveOk)
+                    {
+                        switcherCommandSender.setPreviewVideo(BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx));
+                        SwingUtilities.invokeLater(() -> updatePreviewProgramColorsOnCameraUis());
+                    }
+                });
+            }
+
+            @Override
+            public boolean panTilt(int ptzCameraIdx, double pan, double tilt)
+            {
+                return ptzCameraControllers.get(ptzCameraIdx).panAndTilt(pan, tilt);
+            }
+
+            @Override
+            public boolean zoom(int ptzCameraIdx, double zoom)
+            {
+                return ptzCameraControllers.get(ptzCameraIdx).changeZoom(zoom);
+            }
+        };
+
+        // create the camera control UI and add it to the main GUI
+        this.ptzCameraUi = new PtzCameraControllerUi(new ArrayList<>(BroadcastSettings.getInst().getPtzCameraNamesIps().keySet()), ptzCameraUiCallback);
+        this.ptzCameraUi.setBorder(TitledBorderCreator.createTitledBorder("Camera Presets"));
+        this.parentPtzCamerasPanel.add(this.ptzCameraUi, BorderLayout.CENTER);
 
         // initialize PTZ camera(s) callbacks
-        final List<PtzCameraEntryPanel> ptzCameraEntryPanels = new ArrayList<>();
         BroadcastSettings.getInst().getPtzCameraNamesIps().forEach((ptzCameraName, ptzCameraSocketAddress) -> // TODO maybe one day combine this getter with "settings.getPtzCameraSwitcherInputIndexes()" so everything can be in one structure from the settings
         {
             // for each PTZ camera, create the controller and create the UI
-            final PtzCameraEntryPanel ptzCameraControlEntry = new PtzCameraEntryPanel(ptzCameraName, ptzCameraSocketAddress);
-            ptzCameraEntryPanels.add(ptzCameraControlEntry);
-            this.parentPtzCamerasPanel.add(ptzCameraControlEntry.uiPanel);
+            ptzCameraControllers.add(new PtzCameraController(ptzCameraName, ptzCameraSocketAddress, conn -> this.ptzCameraUi.setCameraConnectionStatus(ptzCameraName, conn)));
         });
 
         // set up the video switcher control UI implementation
@@ -111,17 +155,11 @@ public class BroadcastControlMainStrippedDown extends JFrame
         this.switcherCommandSender.addPreviewVideoSourceChangedConsumer(previewIdx -> {
             // for the love of God make this simplified and its own camera structure!!
             BroadcastSettings.getInst().getSwitcherVideoNamesAndIndexes().entrySet().stream().filter(entry -> entry.getValue().equals(previewIdx)).findFirst().ifPresent(entry -> this.labelPreview.setText("Preview: " + entry.getKey()));
+            this.updatePreviewProgramColorsOnCameraUis(); // reflect on UI when switcher changes its source
         });
         this.switcherCommandSender.addProgramVideoSourceChangedConsumer(programIdx -> {
             BroadcastSettings.getInst().getSwitcherVideoNamesAndIndexes().entrySet().stream().filter(entry -> entry.getValue().equals(programIdx)).findFirst().ifPresent(entry -> this.labelProgram.setText("Program: " + entry.getKey()));
-
-            // pull current preview/program sources
-            final int switcherProgramIdx = this.switcherCommandSender.getCurrentVideoProgramIdx(); // TODO same one right as above??
-
-            // update all PTZ camera UI panels to potentially show the current video switcher's PREVIEW/PROGRAM state
-            final int ptzCameraIdxProgram = IntStream.range(0, BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().size()).boxed()
-                    .filter(ptzCameraIdx -> BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx) == switcherProgramIdx).findFirst().orElse(-1);
-            IntStream.range(0, ptzCameraEntryPanels.size()).boxed().forEach(i -> ptzCameraEntryPanels.get(i).setCameraActive(i == ptzCameraIdxProgram));
+            this.updatePreviewProgramColorsOnCameraUis(); // reflect on UI when switcher changes its source
         });
 
         // after UI initialization is done, finally start the connection to the switcher
@@ -139,65 +177,30 @@ public class BroadcastControlMainStrippedDown extends JFrame
     }
 
     /**
-     * TODO
+     * The PTZ camera UI panels (for LEFT and RIGHT cameras) can have their active colors
+     * updated to reflect the state of the video switcher. This method gets called whenever
+     * the switcher goes to a new state, so we can reflect preview/program states on the camera UI's.
      */
-    private static class PtzCameraEntryPanel
+    private void updatePreviewProgramColorsOnCameraUis()
     {
-        private final JPanel uiPanel = new JPanel(new BorderLayout());
-        private final JLabel connectionStatusLabel = new JLabel();
-        private final DirectionalTouchUi directionalTouchUi = new DirectionalTouchUi();
-        private final HorizontalZoomTouchUi horizontalZoomTouchUi = new HorizontalZoomTouchUi();
+        // pull current preview/program sources
+        final int switcherPreviewIdx = this.switcherCommandSender.getCurrentVideoPreviewIdx();
+        final int switcherProgramIdx = this.switcherCommandSender.getCurrentVideoProgramIdx();
 
-        /**
-         * TODO
-         *
-         * @param ptzCameraName
-         * @param ipAddress
-         * @return
-         */
-        private PtzCameraEntryPanel(String ptzCameraName, InetSocketAddress ipAddress)
-        {
-            // create the controller and a status label on the top
-            this.connectionStatusLabel.setText(ptzCameraName);
-            final PtzCameraController controller = new PtzCameraController(ptzCameraName, ipAddress, conn -> {
-                this.connectionStatusLabel.setText(conn ? "Connected :)" : "Not connected :(");
-                this.connectionStatusLabel.setForeground(conn ? Color.GREEN.darker() : Color.RED.darker());
-            });
-
-            // wrap the directional panel in a new JPanel so we can add empty border space above and below
-            final JPanel directionalPanel = new JPanel(new BorderLayout());
-            directionalPanel.setOpaque(false);
-            directionalPanel.add(this.directionalTouchUi, BorderLayout.CENTER);
-            directionalPanel.setBorder(new EmptyBorder(5, 0, 15, 0));
-
-            // initialize callbacks from the UI elements for pan/tilt and zoom
-            this.directionalTouchUi.addXYOutputConsumer(controller::panAndTilt);
-            this.horizontalZoomTouchUi.addValueChangedConsumer(controller::changeZoom);
-
-            // create a panel and add these items into it
-            this.uiPanel.setOpaque(false);
-            this.uiPanel.setBorder(TitledBorderCreator.createTitledBorder(ptzCameraName));
-            this.horizontalZoomTouchUi.setPreferredSize(new Dimension(0, 60));
-            this.uiPanel.add(this.connectionStatusLabel, BorderLayout.NORTH);
-            this.uiPanel.add(directionalPanel, BorderLayout.CENTER);
-            this.uiPanel.add(this.horizontalZoomTouchUi, BorderLayout.SOUTH);
-        }
-
-        /**
-         * @param active when true, we display a red "ACTIVE" in the camera pan/tilt trackpad
-         */
-        private void setCameraActive(boolean active)
-        {
-            this.directionalTouchUi.setDisplayMessageColor(active ? Color.RED : null);
-            this.directionalTouchUi.setDisplayMessage(active ? "ACTIVE" : "PAN & TILT");
-        }
+        // update all PTZ camera UI panels to potentially show the current video switcher's PREVIEW/PROGRAM state
+        final int ptzCameraIdxPreview = IntStream.range(0, BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().size()).boxed()
+                .filter(ptzCameraIdx -> BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx) == switcherPreviewIdx).findFirst().orElse(-1);
+        final int ptzCameraIdxProgram = IntStream.range(0, BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().size()).boxed()
+                .filter(ptzCameraIdx -> BroadcastSettings.getInst().getPtzCameraSwitcherInputIndexes().get(ptzCameraIdx) == switcherProgramIdx).findFirst().orElse(-1);
+        this.ptzCameraUi.setActivePresetsColored(ptzCameraIdxPreview, ptzCameraIdxProgram);
     }
 
     /**
      * Specify the X and Y percents of the touchscreen press event,
      * and this method commands the switcher to perform one of the transition actions.
-     * @param xPercent x percent of the touch event 0.0-1.0 (referenced to the upper-left corner)
-     * @param yPercent y percent of the touch event 0.0-1.0 (referenced to the upper-left corner)
+     *
+     * @param xPercent              x percent of the touch event 0.0-1.0 (referenced to the upper-left corner)
+     * @param yPercent              y percent of the touch event 0.0-1.0 (referenced to the upper-left corner)
      * @param switcherCommandSender handle to the video switcher for sending the transition commands
      */
     private void handleMultiviewPanelTouchscreenEvent(double xPercent, double yPercent, BlackmagicAtemSwitcherUserLayer switcherCommandSender)
@@ -240,24 +243,24 @@ public class BroadcastControlMainStrippedDown extends JFrame
     private void initComponents()
     {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
-        panel1 = new JPanel();
-        parentPtzCamerasPanel = new JPanel();
-        videoSwitcherPanel = new JPanel();
-        buttonToggleLyrics = new JButton();
-        buttonToggleMute = new JButton();
+        JPanel panel1 = new JPanel();
+        this.parentPtzCamerasPanel = new JPanel();
+        this.videoSwitcherPanel = new JPanel();
+        this.buttonToggleLyrics = new JButton();
+        this.buttonToggleMute = new JButton();
         JPanel panel3 = new JPanel();
-        labelPreview = new JLabel();
-        labelProgram = new JLabel();
+        this.labelPreview = new JLabel();
+        this.labelProgram = new JLabel();
         JPanel panel2 = new JPanel();
-        labelTransitionInProgress = new JLabel();
-        labelConnectionStatus = new JLabel();
+        this.labelTransitionInProgress = new JLabel();
+        this.labelConnectionStatus = new JLabel();
 
         //======== this ========
         setTitle("Default Title Overwritten by Config File");
         setFont(new Font(Font.DIALOG, Font.PLAIN, 14));
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setBackground(Color.black);
-        setMinimumSize(new Dimension(400, 600));
+        setMinimumSize(new Dimension(400, 300));
         setIconImage(new ImageIcon(getClass().getResource("/icons/camera_fullsize.png")).getImage());
         setName("this");
         Container contentPane = getContentPane();
@@ -275,45 +278,45 @@ public class BroadcastControlMainStrippedDown extends JFrame
 
             //======== parentPtzCamerasPanel ========
             {
-                parentPtzCamerasPanel.setOpaque(false);
-                parentPtzCamerasPanel.setBorder(BorderFactory.createEmptyBorder());
-                parentPtzCamerasPanel.setPreferredSize(new Dimension(673, 10));
-                parentPtzCamerasPanel.setMinimumSize(new Dimension(0, 0));
-                parentPtzCamerasPanel.setRequestFocusEnabled(false);
-                parentPtzCamerasPanel.setName("parentPtzCamerasPanel");
-                parentPtzCamerasPanel.setLayout(new GridLayout(1, 0, 10, 0));
+                this.parentPtzCamerasPanel.setOpaque(false);
+                this.parentPtzCamerasPanel.setBorder(BorderFactory.createEmptyBorder());
+                this.parentPtzCamerasPanel.setPreferredSize(new Dimension(673, 10));
+                this.parentPtzCamerasPanel.setMinimumSize(new Dimension(0, 0));
+                this.parentPtzCamerasPanel.setRequestFocusEnabled(false);
+                this.parentPtzCamerasPanel.setName("parentPtzCamerasPanel");
+                this.parentPtzCamerasPanel.setLayout(new GridLayout(1, 0, 10, 0));
             }
-            panel1.add(parentPtzCamerasPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+            panel1.add(this.parentPtzCamerasPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 10, 0), 0, 0));
+                new Insets(0, 0, 0, 0), 0, 0));
 
             //======== videoSwitcherPanel ========
             {
-                videoSwitcherPanel.setOpaque(false);
-                videoSwitcherPanel.setName("videoSwitcherPanel");
-                videoSwitcherPanel.setLayout(new GridBagLayout());
-                ((GridBagLayout)videoSwitcherPanel.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
-                ((GridBagLayout)videoSwitcherPanel.getLayout()).rowHeights = new int[] {0, 0};
-                ((GridBagLayout)videoSwitcherPanel.getLayout()).columnWeights = new double[] {0.0, 0.0, 0.0, 1.0, 1.0E-4};
-                ((GridBagLayout)videoSwitcherPanel.getLayout()).rowWeights = new double[] {0.0, 1.0E-4};
+                this.videoSwitcherPanel.setOpaque(false);
+                this.videoSwitcherPanel.setName("videoSwitcherPanel");
+                this.videoSwitcherPanel.setLayout(new GridBagLayout());
+                ((GridBagLayout)this.videoSwitcherPanel.getLayout()).columnWidths = new int[] {0, 0, 0, 0, 0};
+                ((GridBagLayout)this.videoSwitcherPanel.getLayout()).rowHeights = new int[] {0, 0};
+                ((GridBagLayout)this.videoSwitcherPanel.getLayout()).columnWeights = new double[] {0.0, 0.0, 0.0, 1.0, 1.0E-4};
+                ((GridBagLayout)this.videoSwitcherPanel.getLayout()).rowWeights = new double[] {0.0, 1.0E-4};
 
                 //---- buttonToggleLyrics ----
-                buttonToggleLyrics.setText("<html>Toggle<br>Lyrics</html>");
-                buttonToggleLyrics.setForeground(Color.cyan);
-                buttonToggleLyrics.setBackground(Color.darkGray);
-                buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 20));
-                buttonToggleLyrics.setName("buttonToggleLyrics");
-                videoSwitcherPanel.add(buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                this.buttonToggleLyrics.setText("<html>TOGGLE<br>LYRICS</html>");
+                this.buttonToggleLyrics.setForeground(Color.cyan);
+                this.buttonToggleLyrics.setBackground(Color.darkGray);
+                this.buttonToggleLyrics.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                this.buttonToggleLyrics.setName("buttonToggleLyrics");
+                this.videoSwitcherPanel.add(this.buttonToggleLyrics, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                     new Insets(0, 0, 0, 15), 0, 0));
 
                 //---- buttonToggleMute ----
-                buttonToggleMute.setText("MUTE");
-                buttonToggleMute.setForeground(Color.cyan);
-                buttonToggleMute.setBackground(Color.darkGray);
-                buttonToggleMute.setFont(new Font("Segoe UI", Font.BOLD, 20));
-                buttonToggleMute.setName("buttonToggleMute");
-                videoSwitcherPanel.add(buttonToggleMute, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
+                this.buttonToggleMute.setText("MUTE");
+                this.buttonToggleMute.setForeground(Color.cyan);
+                this.buttonToggleMute.setBackground(Color.darkGray);
+                this.buttonToggleMute.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                this.buttonToggleMute.setName("buttonToggleMute");
+                this.videoSwitcherPanel.add(this.buttonToggleMute, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                     new Insets(0, 0, 0, 15), 0, 0));
 
@@ -328,29 +331,29 @@ public class BroadcastControlMainStrippedDown extends JFrame
                     ((GridBagLayout)panel3.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
 
                     //---- labelPreview ----
-                    labelPreview.setBackground(Color.black);
-                    labelPreview.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                    labelPreview.setHorizontalAlignment(SwingConstants.LEFT);
-                    labelPreview.setText("Preview:");
-                    labelPreview.setForeground(Color.white);
-                    labelPreview.setName("labelPreview");
-                    panel3.add(labelPreview, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                    this.labelPreview.setBackground(Color.black);
+                    this.labelPreview.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                    this.labelPreview.setHorizontalAlignment(SwingConstants.LEFT);
+                    this.labelPreview.setText("Preview:");
+                    this.labelPreview.setForeground(Color.white);
+                    this.labelPreview.setName("labelPreview");
+                    panel3.add(this.labelPreview, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                         GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                         new Insets(0, 0, 5, 0), 0, 0));
 
                     //---- labelProgram ----
-                    labelProgram.setText("Program:");
-                    labelProgram.setForeground(Color.white);
-                    labelProgram.setBackground(Color.black);
-                    labelProgram.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                    labelProgram.setHorizontalAlignment(SwingConstants.LEFT);
-                    labelProgram.setMaximumSize(new Dimension(150, 15));
-                    labelProgram.setName("labelProgram");
-                    panel3.add(labelProgram, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                    this.labelProgram.setText("Program:");
+                    this.labelProgram.setForeground(Color.white);
+                    this.labelProgram.setBackground(Color.black);
+                    this.labelProgram.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                    this.labelProgram.setHorizontalAlignment(SwingConstants.LEFT);
+                    this.labelProgram.setMaximumSize(new Dimension(150, 15));
+                    this.labelProgram.setName("labelProgram");
+                    panel3.add(this.labelProgram, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
                         GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                         new Insets(0, 0, 0, 0), 0, 0));
                 }
-                videoSwitcherPanel.add(panel3, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+                this.videoSwitcherPanel.add(panel3, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                     new Insets(0, 0, 0, 15), 0, 0));
 
@@ -365,32 +368,32 @@ public class BroadcastControlMainStrippedDown extends JFrame
                     ((GridBagLayout)panel2.getLayout()).rowWeights = new double[] {1.0, 1.0, 1.0E-4};
 
                     //---- labelTransitionInProgress ----
-                    labelTransitionInProgress.setBackground(Color.black);
-                    labelTransitionInProgress.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                    labelTransitionInProgress.setHorizontalAlignment(SwingConstants.LEFT);
-                    labelTransitionInProgress.setText("Transition In Progress...");
-                    labelTransitionInProgress.setName("labelTransitionInProgress");
-                    panel2.add(labelTransitionInProgress, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                    this.labelTransitionInProgress.setBackground(Color.black);
+                    this.labelTransitionInProgress.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                    this.labelTransitionInProgress.setHorizontalAlignment(SwingConstants.LEFT);
+                    this.labelTransitionInProgress.setText("Transition In Progress...");
+                    this.labelTransitionInProgress.setName("labelTransitionInProgress");
+                    panel2.add(this.labelTransitionInProgress, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
                         GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                         new Insets(0, 0, 5, 0), 0, 0));
 
                     //---- labelConnectionStatus ----
-                    labelConnectionStatus.setText("Switcher not connected :(");
-                    labelConnectionStatus.setForeground(Color.red);
-                    labelConnectionStatus.setBackground(Color.black);
-                    labelConnectionStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                    labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
-                    labelConnectionStatus.setMaximumSize(new Dimension(150, 15));
-                    labelConnectionStatus.setName("labelConnectionStatus");
-                    panel2.add(labelConnectionStatus, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                    this.labelConnectionStatus.setText("Switcher not connected :(");
+                    this.labelConnectionStatus.setForeground(Color.red);
+                    this.labelConnectionStatus.setBackground(Color.black);
+                    this.labelConnectionStatus.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                    this.labelConnectionStatus.setHorizontalAlignment(SwingConstants.LEFT);
+                    this.labelConnectionStatus.setMaximumSize(new Dimension(150, 15));
+                    this.labelConnectionStatus.setName("labelConnectionStatus");
+                    panel2.add(this.labelConnectionStatus, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
                         GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                         new Insets(0, 0, 0, 0), 0, 0));
                 }
-                videoSwitcherPanel.add(panel2, new GridBagConstraints(3, 0, 1, 1, 0.0, 0.0,
+                this.videoSwitcherPanel.add(panel2, new GridBagConstraints(3, 0, 1, 1, 0.0, 0.0,
                     GridBagConstraints.EAST, GridBagConstraints.VERTICAL,
                     new Insets(0, 0, 0, 0), 0, 0));
             }
-            panel1.add(videoSwitcherPanel, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+            panel1.add(this.videoSwitcherPanel, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 0), 0, 0));
         }
@@ -401,7 +404,6 @@ public class BroadcastControlMainStrippedDown extends JFrame
     }
 
     // JFormDesigner - Variables declaration - DO NOT MODIFY  //GEN-BEGIN:variables
-    private JPanel panel1;
     private JPanel parentPtzCamerasPanel;
     private JPanel videoSwitcherPanel;
     private JButton buttonToggleLyrics;

@@ -13,6 +13,16 @@ import java.awt.Font;
  */
 public class TitledBorderCreator
 {
+    private static Color BORDER_COLOR = Color.MAGENTA;
+
+    /**
+     * @param color color to show for ALL borders created using {@link #createTitledBorder(String)}
+     */
+    public static void setBorderColor(Color color)
+    {
+        BORDER_COLOR = color;
+    }
+
     /**
      * Simple utility for creating a custom border so that all panels can look uniform.
      *
@@ -21,8 +31,8 @@ public class TitledBorderCreator
     public static Border createTitledBorder(String title)
     {
         return new CompoundBorder(
-                new TitledBorder(new LineBorder(Color.magenta, 3, true), title, TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
-                        new Font("Ubuntu", Font.BOLD, 20), Color.magenta),
+                new TitledBorder(new LineBorder(BORDER_COLOR, 3, true), title, TitledBorder.LEADING, TitledBorder.DEFAULT_POSITION,
+                        new Font("Ubuntu", Font.BOLD, 20), BORDER_COLOR),
                 new EmptyBorder(0, 5, 5, 5));
     }
 }

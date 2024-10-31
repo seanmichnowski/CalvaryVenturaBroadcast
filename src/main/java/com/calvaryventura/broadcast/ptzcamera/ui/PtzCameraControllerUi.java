@@ -159,7 +159,7 @@ public class PtzCameraControllerUi extends JPanel
                 this.directionalSwipePanel.setEnabled(true);
                 this.zoomSlider.setEnabled(true);
                 this.presets.stream().filter(p -> !p.equals(preset)).forEach(PtzCameraPresetEntryUi::setEditButtonDeselected);
-                this.labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>" + preset.getCameraName() + "/" + preset.getPresetName() + "</html>");
+                this.labelPresetEditStatus.setText("<html><u>Currently Editing:</u><br><font color='white'>&nbsp;&nbsp;&nbsp;&nbsp;" + preset.getPresetName() + "</font></html>");
                 this.presetSelectedForEditing = preset;
                 break;
 
@@ -170,7 +170,7 @@ public class PtzCameraControllerUi extends JPanel
                 this.directionalSwipePanel.setEnabled(false);
                 this.zoomSlider.setEnabled(false);
                 this.presets.forEach(PtzCameraPresetEntryUi::setEditButtonDeselected);
-                this.labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>[Nothing selected]</html>");
+                this.labelPresetEditStatus.setText("<html><u>Currently Editing:</u><br><font color='white'>&nbsp;&nbsp;&nbsp;&nbsp;<i>[Nothing selected]</i></font></html>");
                 this.presetSelectedForEditing = null;
                 break;
 
@@ -191,7 +191,7 @@ public class PtzCameraControllerUi extends JPanel
     {
         final boolean setOk = this.callback.setPressed(this.presetSelectedForEditing.getCameraIdx(), this.presetSelectedForEditing.getPresetIdx());
         final String origText = this.labelPresetEditStatus.getText();
-        this.labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>" + this.presetSelectedForEditing.getPresetName() +
+        this.labelPresetEditStatus.setText("<html><u>Currently Editing:</u><br>" + this.presetSelectedForEditing.getPresetName() +
                 "<font color='white'>&nbsp;&nbsp;[Save: " + (setOk ? "OK" : "FAILED") + "]</font></html>");
         final Timer tOriginal = new Timer(0, action -> this.labelPresetEditStatus.setText(origText));
         tOriginal.setInitialDelay(2000);
@@ -327,18 +327,18 @@ public class PtzCameraControllerUi extends JPanel
         JSeparator separator1 = new JSeparator();
         JPanel panel1 = new JPanel();
         JPanel panel3 = new JPanel();
-        labelConnectionStatus2 = new JLabel();
-        buttonAddNewPreset = new JButton();
-        comboBoxCameraNames = new JComboBox<>();
-        separator2 = new JSeparator();
-        labelPresetEditStatus = new JLabel();
+        this.labelConnectionStatus2 = new JLabel();
+        this.buttonAddNewPreset = new JButton();
+        this.comboBoxCameraNames = new JComboBox<>();
+        this.separator2 = new JSeparator();
+        this.labelPresetEditStatus = new JLabel();
         JPanel panel2 = new JPanel();
-        buttonSaveEdits = new JButton();
-        buttonDeletePreset = new JButton();
-        directionalSwipePanel = new DirectionalTouchUi();
-        zoomSlider = new HorizontalZoomTouchUi();
-        scrollPanePresets = new JScrollPane();
-        panelPresetsHolder = new JPanel();
+        this.buttonSaveEdits = new JButton();
+        this.buttonDeletePreset = new JButton();
+        this.directionalSwipePanel = new DirectionalTouchUi();
+        this.zoomSlider = new HorizontalZoomTouchUi();
+        this.scrollPanePresets = new JScrollPane();
+        this.panelPresetsHolder = new JPanel();
 
         //======== this ========
         setBackground(Color.black);
@@ -347,10 +347,10 @@ public class PtzCameraControllerUi extends JPanel
         setMinimumSize(new Dimension(324, 100));
         setName("this");
         setLayout(new GridBagLayout());
-        ((GridBagLayout) getLayout()).columnWidths = new int[]{0, 0, 140, 0};
-        ((GridBagLayout) getLayout()).rowHeights = new int[]{0, 0};
-        ((GridBagLayout) getLayout()).columnWeights = new double[]{1.0, 0.0, 0.0, 1.0E-4};
-        ((GridBagLayout) getLayout()).rowWeights = new double[]{1.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).columnWidths = new int[] {0, 0, 140, 0};
+        ((GridBagLayout)getLayout()).rowHeights = new int[] {0, 0};
+        ((GridBagLayout)getLayout()).columnWeights = new double[] {1.0, 0.0, 0.0, 1.0E-4};
+        ((GridBagLayout)getLayout()).rowWeights = new double[] {1.0, 1.0E-4};
 
         //---- separator1 ----
         separator1.setOrientation(SwingConstants.VERTICAL);
@@ -362,93 +362,94 @@ public class PtzCameraControllerUi extends JPanel
         separator1.setPreferredSize(new Dimension(2, 0));
         separator1.setName("separator1");
         add(separator1, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.VERTICAL,
-                new Insets(0, 0, 0, 5), 0, 0));
+            GridBagConstraints.CENTER, GridBagConstraints.VERTICAL,
+            new Insets(0, 0, 0, 5), 0, 0));
 
         //======== panel1 ========
         {
             panel1.setOpaque(false);
             panel1.setBorder(new EmptyBorder(0, 5, 0, 0));
+            panel1.setMinimumSize(new Dimension(305, 300));
+            panel1.setPreferredSize(new Dimension(305, 300));
             panel1.setName("panel1");
             panel1.setLayout(new GridBagLayout());
-            ((GridBagLayout) panel1.getLayout()).columnWidths = new int[]{0, 0};
-            ((GridBagLayout) panel1.getLayout()).rowHeights = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0};
-            ((GridBagLayout) panel1.getLayout()).columnWeights = new double[]{1.0, 1.0E-4};
-            ((GridBagLayout) panel1.getLayout()).rowWeights = new double[]{0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).columnWidths = new int[] {0, 0};
+            ((GridBagLayout)panel1.getLayout()).rowHeights = new int[] {0, 0, 0, 0, 0, 0, 0, 0};
+            ((GridBagLayout)panel1.getLayout()).columnWeights = new double[] {1.0, 1.0E-4};
+            ((GridBagLayout)panel1.getLayout()).rowWeights = new double[] {0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0E-4};
 
             //======== panel3 ========
             {
                 panel3.setOpaque(false);
                 panel3.setName("panel3");
                 panel3.setLayout(new GridBagLayout());
-                ((GridBagLayout) panel3.getLayout()).columnWidths = new int[]{0, 0, 0};
-                ((GridBagLayout) panel3.getLayout()).rowHeights = new int[]{0, 0};
-                ((GridBagLayout) panel3.getLayout()).columnWeights = new double[]{1.0, 0.0, 1.0E-4};
-                ((GridBagLayout) panel3.getLayout()).rowWeights = new double[]{1.0, 1.0E-4};
+                ((GridBagLayout)panel3.getLayout()).columnWidths = new int[] {0, 0, 0};
+                ((GridBagLayout)panel3.getLayout()).rowHeights = new int[] {0, 0, 0};
+                ((GridBagLayout)panel3.getLayout()).columnWeights = new double[] {1.0, 0.0, 1.0E-4};
+                ((GridBagLayout)panel3.getLayout()).rowWeights = new double[] {1.0, 0.0, 1.0E-4};
 
                 //---- labelConnectionStatus2 ----
-                labelConnectionStatus2.setText("<html><u>Select Camera for which<br>to add new preset:</u></html>");
-                labelConnectionStatus2.setForeground(Color.green);
-                labelConnectionStatus2.setBackground(Color.black);
-                labelConnectionStatus2.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                labelConnectionStatus2.setHorizontalAlignment(SwingConstants.LEFT);
-                labelConnectionStatus2.setHorizontalTextPosition(SwingConstants.LEFT);
-                labelConnectionStatus2.setVerticalAlignment(SwingConstants.BOTTOM);
-                labelConnectionStatus2.setName("labelConnectionStatus2");
-                panel3.add(labelConnectionStatus2, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                        new Insets(0, 0, 0, 7), 0, 0));
+                this.labelConnectionStatus2.setText("<html><u>Create new preset for camera:</u></html>");
+                this.labelConnectionStatus2.setForeground(new Color(0xffff33));
+                this.labelConnectionStatus2.setBackground(Color.black);
+                this.labelConnectionStatus2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                this.labelConnectionStatus2.setHorizontalAlignment(SwingConstants.LEFT);
+                this.labelConnectionStatus2.setHorizontalTextPosition(SwingConstants.LEFT);
+                this.labelConnectionStatus2.setName("labelConnectionStatus2");
+                panel3.add(this.labelConnectionStatus2, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 5), 0, 0));
 
                 //---- buttonAddNewPreset ----
-                buttonAddNewPreset.setIcon(new ImageIcon(getClass().getResource("/icons/plus_green_32h.png")));
-                buttonAddNewPreset.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                buttonAddNewPreset.setHorizontalTextPosition(SwingConstants.LEADING);
-                buttonAddNewPreset.setForeground(Color.green);
-                buttonAddNewPreset.setPreferredSize(new Dimension(40, 40));
-                buttonAddNewPreset.setMinimumSize(new Dimension(40, 40));
-                buttonAddNewPreset.setMaximumSize(new Dimension(100, 30));
-                buttonAddNewPreset.setBackground(Color.darkGray);
-                buttonAddNewPreset.setIconTextGap(6);
-                buttonAddNewPreset.setName("buttonAddNewPreset");
-                panel3.add(buttonAddNewPreset, new GridBagConstraints(1, 0, 1, 1, 0.0, 0.0,
-                        GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                        new Insets(0, 0, 0, 0), 0, 0));
+                this.buttonAddNewPreset.setIcon(new ImageIcon(getClass().getResource("/icons/plus_green_32h.png")));
+                this.buttonAddNewPreset.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                this.buttonAddNewPreset.setHorizontalTextPosition(SwingConstants.LEADING);
+                this.buttonAddNewPreset.setForeground(Color.green);
+                this.buttonAddNewPreset.setPreferredSize(new Dimension(32, 32));
+                this.buttonAddNewPreset.setMinimumSize(new Dimension(32, 32));
+                this.buttonAddNewPreset.setMaximumSize(new Dimension(100, 30));
+                this.buttonAddNewPreset.setBackground(Color.darkGray);
+                this.buttonAddNewPreset.setIconTextGap(6);
+                this.buttonAddNewPreset.setName("buttonAddNewPreset");
+                panel3.add(this.buttonAddNewPreset, new GridBagConstraints(1, 0, 1, 2, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 0), 0, 0));
+
+                //---- comboBoxCameraNames ----
+                this.comboBoxCameraNames.setModel(new DefaultComboBoxModel<>(new String[] {
+                    " "
+                }));
+                this.comboBoxCameraNames.setForeground(Color.white);
+                this.comboBoxCameraNames.setBackground(Color.darkGray);
+                this.comboBoxCameraNames.setFont(new Font("Ubuntu", Font.PLAIN, 16));
+                this.comboBoxCameraNames.setName("comboBoxCameraNames");
+                panel3.add(this.comboBoxCameraNames, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
+                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                    new Insets(0, 0, 0, 5), 0, 0));
             }
             panel1.add(panel3, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 10, 0), 0, 0));
-
-            //---- comboBoxCameraNames ----
-            comboBoxCameraNames.setModel(new DefaultComboBoxModel<>(new String[]{
-                    " "
-            }));
-            comboBoxCameraNames.setForeground(Color.white);
-            comboBoxCameraNames.setBackground(Color.black);
-            comboBoxCameraNames.setFont(new Font("Ubuntu", Font.BOLD, 18));
-            comboBoxCameraNames.setName("comboBoxCameraNames");
-            panel1.add(comboBoxCameraNames, new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 10, 0), 0, 0));
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 5, 0), 0, 0));
 
             //---- separator2 ----
-            separator2.setForeground(Color.magenta);
-            separator2.setName("separator2");
-            panel1.add(separator2, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL,
-                    new Insets(0, 0, 10, 0), 0, 0));
+            this.separator2.setForeground(Color.magenta);
+            this.separator2.setName("separator2");
+            panel1.add(this.separator2, new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL,
+                new Insets(0, 0, 5, 0), 0, 0));
 
             //---- labelPresetEditStatus ----
-            labelPresetEditStatus.setText("<html><u>Currently Editing Preset:</u><br>[Nothing selected]</html>");
-            labelPresetEditStatus.setForeground(Color.green);
-            labelPresetEditStatus.setBackground(Color.black);
-            labelPresetEditStatus.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            labelPresetEditStatus.setHorizontalAlignment(SwingConstants.LEFT);
-            labelPresetEditStatus.setHorizontalTextPosition(SwingConstants.LEFT);
-            labelPresetEditStatus.setVerticalAlignment(SwingConstants.BOTTOM);
-            labelPresetEditStatus.setName("labelPresetEditStatus");
-            panel1.add(labelPresetEditStatus, new GridBagConstraints(0, 4, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 10, 0), 0, 0));
+            this.labelPresetEditStatus.setText("<html><u>Currently Editing:</u><br><font color='white'>&nbsp;&nbsp;&nbsp;&nbsp;<i>[Nothing selected]</i></font></html>");
+            this.labelPresetEditStatus.setForeground(new Color(0xffff33));
+            this.labelPresetEditStatus.setBackground(Color.black);
+            this.labelPresetEditStatus.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            this.labelPresetEditStatus.setHorizontalAlignment(SwingConstants.LEFT);
+            this.labelPresetEditStatus.setHorizontalTextPosition(SwingConstants.LEFT);
+            this.labelPresetEditStatus.setVerticalAlignment(SwingConstants.BOTTOM);
+            this.labelPresetEditStatus.setName("labelPresetEditStatus");
+            panel1.add(this.labelPresetEditStatus, new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 5, 0), 0, 0));
 
             //======== panel2 ========
             {
@@ -459,82 +460,82 @@ public class PtzCameraControllerUi extends JPanel
                 panel2.setLayout(new GridLayout(1, 0, 10, 0));
 
                 //---- buttonSaveEdits ----
-                buttonSaveEdits.setIcon(new ImageIcon(getClass().getResource("/icons/orange_location_flag_24x24.png")));
-                buttonSaveEdits.setText("<html>SAVE<br>EDITS</html>");
-                buttonSaveEdits.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                buttonSaveEdits.setHorizontalTextPosition(SwingConstants.LEADING);
-                buttonSaveEdits.setForeground(new Color(0xcc6600));
-                buttonSaveEdits.setPreferredSize(new Dimension(100, 34));
-                buttonSaveEdits.setMinimumSize(new Dimension(100, 34));
-                buttonSaveEdits.setMaximumSize(new Dimension(100, 30));
-                buttonSaveEdits.setBackground(Color.darkGray);
-                buttonSaveEdits.setIconTextGap(2);
-                buttonSaveEdits.setEnabled(false);
-                buttonSaveEdits.setName("buttonSaveEdits");
-                panel2.add(buttonSaveEdits);
+                this.buttonSaveEdits.setIcon(new ImageIcon(getClass().getResource("/icons/orange_location_flag_24x24.png")));
+                this.buttonSaveEdits.setText("<html>SAVE<br>EDITS</html>");
+                this.buttonSaveEdits.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                this.buttonSaveEdits.setHorizontalTextPosition(SwingConstants.LEADING);
+                this.buttonSaveEdits.setForeground(new Color(0xcc6600));
+                this.buttonSaveEdits.setPreferredSize(new Dimension(100, 34));
+                this.buttonSaveEdits.setMinimumSize(new Dimension(100, 34));
+                this.buttonSaveEdits.setMaximumSize(new Dimension(100, 30));
+                this.buttonSaveEdits.setBackground(Color.darkGray);
+                this.buttonSaveEdits.setIconTextGap(2);
+                this.buttonSaveEdits.setEnabled(false);
+                this.buttonSaveEdits.setName("buttonSaveEdits");
+                panel2.add(this.buttonSaveEdits);
 
                 //---- buttonDeletePreset ----
-                buttonDeletePreset.setIcon(new ImageIcon(getClass().getResource("/icons/red_circle_32x32.png")));
-                buttonDeletePreset.setText("<html>DELETE<br>PRESET</html>");
-                buttonDeletePreset.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                buttonDeletePreset.setHorizontalTextPosition(SwingConstants.LEADING);
-                buttonDeletePreset.setForeground(Color.red);
-                buttonDeletePreset.setPreferredSize(new Dimension(200, 40));
-                buttonDeletePreset.setMinimumSize(new Dimension(150, 40));
-                buttonDeletePreset.setMaximumSize(new Dimension(100, 30));
-                buttonDeletePreset.setBackground(Color.darkGray);
-                buttonDeletePreset.setIconTextGap(2);
-                buttonDeletePreset.setEnabled(false);
-                buttonDeletePreset.setName("buttonDeletePreset");
-                panel2.add(buttonDeletePreset);
+                this.buttonDeletePreset.setIcon(new ImageIcon(getClass().getResource("/icons/red_circle_32x32.png")));
+                this.buttonDeletePreset.setText("<html>DELETE<br>PRESET</html>");
+                this.buttonDeletePreset.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                this.buttonDeletePreset.setHorizontalTextPosition(SwingConstants.LEADING);
+                this.buttonDeletePreset.setForeground(Color.red);
+                this.buttonDeletePreset.setPreferredSize(new Dimension(200, 40));
+                this.buttonDeletePreset.setMinimumSize(new Dimension(150, 40));
+                this.buttonDeletePreset.setMaximumSize(new Dimension(100, 30));
+                this.buttonDeletePreset.setBackground(Color.darkGray);
+                this.buttonDeletePreset.setIconTextGap(2);
+                this.buttonDeletePreset.setEnabled(false);
+                this.buttonDeletePreset.setName("buttonDeletePreset");
+                panel2.add(this.buttonDeletePreset);
             }
-            panel1.add(panel2, new GridBagConstraints(0, 5, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 10, 0), 0, 0));
+            panel1.add(panel2, new GridBagConstraints(0, 4, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 5, 0), 0, 0));
 
             //---- directionalSwipePanel ----
-            directionalSwipePanel.setMinimumSize(new Dimension(300, 150));
-            directionalSwipePanel.setPreferredSize(new Dimension(300, 150));
-            directionalSwipePanel.setDisplayMessage("PAN & TILT");
-            directionalSwipePanel.setEnabled(false);
-            directionalSwipePanel.setName("directionalSwipePanel");
-            panel1.add(directionalSwipePanel, new GridBagConstraints(0, 6, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 10, 0), 0, 0));
+            this.directionalSwipePanel.setMinimumSize(new Dimension(300, 150));
+            this.directionalSwipePanel.setPreferredSize(new Dimension(300, 150));
+            this.directionalSwipePanel.setDisplayMessage("PAN & TILT");
+            this.directionalSwipePanel.setEnabled(false);
+            this.directionalSwipePanel.setName("directionalSwipePanel");
+            panel1.add(this.directionalSwipePanel, new GridBagConstraints(0, 5, 1, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+                new Insets(0, 0, 5, 0), 0, 0));
 
             //---- zoomSlider ----
-            zoomSlider.setMinimumSize(new Dimension(300, 45));
-            zoomSlider.setPreferredSize(new Dimension(300, 45));
-            zoomSlider.setEnabled(false);
-            zoomSlider.setName("zoomSlider");
-            panel1.add(zoomSlider, new GridBagConstraints(0, 7, 1, 1, 0.0, 0.0,
-                    GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                    new Insets(0, 0, 0, 0), 0, 0));
-        }
-        add(panel1, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+            this.zoomSlider.setMinimumSize(new Dimension(300, 45));
+            this.zoomSlider.setPreferredSize(new Dimension(300, 45));
+            this.zoomSlider.setEnabled(false);
+            this.zoomSlider.setName("zoomSlider");
+            panel1.add(this.zoomSlider, new GridBagConstraints(0, 6, 1, 1, 0.0, 0.0,
                 GridBagConstraints.CENTER, GridBagConstraints.BOTH,
                 new Insets(0, 0, 0, 0), 0, 0));
+        }
+        add(panel1, new GridBagConstraints(2, 0, 1, 1, 0.0, 0.0,
+            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+            new Insets(0, 0, 0, 0), 0, 0));
 
         //======== scrollPanePresets ========
         {
-            scrollPanePresets.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            scrollPanePresets.setOpaque(false);
-            scrollPanePresets.setBackground(Color.black);
-            scrollPanePresets.setBorder(null);
-            scrollPanePresets.setName("scrollPanePresets");
+            this.scrollPanePresets.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            this.scrollPanePresets.setOpaque(false);
+            this.scrollPanePresets.setBackground(Color.black);
+            this.scrollPanePresets.setBorder(null);
+            this.scrollPanePresets.setName("scrollPanePresets");
 
             //======== panelPresetsHolder ========
             {
-                panelPresetsHolder.setBorder(new EmptyBorder(0, 0, 0, 10));
-                panelPresetsHolder.setBackground(Color.black);
-                panelPresetsHolder.setName("panelPresetsHolder");
-                panelPresetsHolder.setLayout(new BoxLayout(panelPresetsHolder, BoxLayout.Y_AXIS));
+                this.panelPresetsHolder.setBorder(new EmptyBorder(0, 3, 0, 10));
+                this.panelPresetsHolder.setBackground(Color.black);
+                this.panelPresetsHolder.setName("panelPresetsHolder");
+                this.panelPresetsHolder.setLayout(new BoxLayout(this.panelPresetsHolder, BoxLayout.Y_AXIS));
             }
-            scrollPanePresets.setViewportView(panelPresetsHolder);
+            this.scrollPanePresets.setViewportView(this.panelPresetsHolder);
         }
-        add(scrollPanePresets, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.CENTER, GridBagConstraints.BOTH,
-                new Insets(0, 0, 0, 5), 0, 0));
+        add(this.scrollPanePresets, new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0,
+            GridBagConstraints.CENTER, GridBagConstraints.BOTH,
+            new Insets(0, 0, 0, 5), 0, 0));
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
 
